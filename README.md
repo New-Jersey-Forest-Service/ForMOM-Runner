@@ -1,7 +1,7 @@
 # ForMOM Runner
 *GUI Application*
 
-**TODO: Insert Picture**
+![22Week_ModelRunner](https://user-images.githubusercontent.com/49537988/181365320-7868a2d1-0cb4-4ce9-b08d-bef3a5cf4b70.png)
 
 This program takes two .csv files specifying a linear optimization problem,
 presumably built with the ForMOM Model Builder, and runs the model.
