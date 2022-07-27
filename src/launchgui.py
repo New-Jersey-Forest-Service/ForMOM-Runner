@@ -16,6 +16,7 @@ import pyomo.opt as opt
 
 PATH_DISPLAY_LEN = 35
 CSV_FILES = [('CSV Files','*.csv'), ('All Files','*.*')]
+TXT_FILES = [('Text Files','*.txt'), ('All Files','*.*')]
 
 
 
@@ -154,6 +155,9 @@ class GuibuildingApp:
 
 
 	def onbtn_import_const(self):
+		'''
+			Select constraint file with csv chooser
+		'''
 		constrFileStr = filedialog.askopenfilename(
 			filetypes=CSV_FILES,
 			defaultextension=CSV_FILES
@@ -216,7 +220,7 @@ class GuibuildingApp:
 			self.state.constFileStr
 			)
 		
-		instance = pyomo_runner.loadPyomoModelFromDat(temppath)
+		instance = pyomo_runner.loadPyomoModelFromDat(temppath.name)
 		instance, res = pyomo_runner.solveConcreteModel(instance)
 		resStr = pyomo_runner.getOutputStr(instance, res)
 
@@ -230,7 +234,27 @@ class GuibuildingApp:
 
 
 	def onbtn_output_save(self):
-		pass
+		'''
+		Select a text file to output everything to.
+		'''
+		outputTxtFileStr = filedialog.asksaveasfilename(
+			filetypes=TXT_FILES,
+			defaultextension=TXT_FILES
+		)
+		msg = ''
+
+		if isInvalidFile(outputTxtFileStr):
+			msg = "[[ XX Error ]]\nInvalid output file"
+		else:
+			runOut = pyomo_runner.getOutputStr(self.state.runInstance, self.state.runResult)
+			with open(outputTxtFileStr, 'w') as f:
+				f.write(runOut)
+			
+			msg = f"[[ Success]]\n\nWrote to file {outputTxtFileStr}"
+			self._write_new_status("Unable to output")
+
+		self._write_new_status(msg)
+		self._redraw_dynamics()
 
 	
 	def _write_new_status(self, msg_str: str):

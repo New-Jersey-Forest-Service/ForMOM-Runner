@@ -18,8 +18,6 @@ import pyomo.environ as pyo
 import pyomo.opt as opt
 
 #Path for input file
-filepath = '/home/velcro/Documents/Professional/NJDEP/TechWork/ForMOM/MiniModelRunning/run2/out.dat'
-# filepath = '../convert_to_dat/sample_data/SLmonthly1_out.dat'
 
 # In Python2, integer divisions truncate values (1/2 = 0 instead of 0.5)
 # which breaks the solver. Either way, we should be using python3
@@ -70,8 +68,7 @@ def loadPyomoModelFromDat (datFilepath: str) -> pyo.ConcreteModel:
 	model.EQConstraint = pyo.Constraint(model.index_eq_consts, rule=eq_mat_rule)
 
 	# Now read data file
-	# instance = model.create_instance(filename=datFilepath)
-	instance = model.create_instance(filename=filepath)
+	instance = model.create_instance(filename=datFilepath)
 
 	# Add duals (shadow cost) info 
 	# ong I have no idea why duals are the same as shadow costs, but they are so we good
@@ -161,6 +158,7 @@ def getOutputStr (instance: pyo.ConcreteModel, results: opt.SolverResults) -> st
 
 
 if __name__ == '__main__':
+	filepath = '/home/velcro/Documents/Professional/NJDEP/TechWork/ForMOM/MiniModelRunning/run2/out.dat'
 	instance = loadPyomoModelFromDat(filepath)
 	instance, res = solveConcreteModel(instance)
 	resStr = getOutputStr(instance, res)
