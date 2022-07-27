@@ -1,4 +1,4 @@
-# ForMOM Model Runner
+# ForMOM Runner
 *GUI Application*
 
 **TODO: Insert Picture**
