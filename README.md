@@ -1,12 +1,26 @@
-# ForMOM DB Rebuilder
-*command line utility*
+# ForMOM Model Runner
+*GUI Application*
 
-![20Week_DBRebuild](https://user-images.githubusercontent.com/49537988/178081051-e70ae0e2-faeb-45b7-9502-6a4190c1dbf1.png)
+**TODO: Insert Picture**
 
-This program takes a raw sqlite3 database from FIA Datamart and re-organizes it so that it can be run through FVS. 
-We have it setup for New Jersey, but it is configurable for other states - there are example configs for MD and WY.
-Check out the [wiki page](https://github.com/New-Jersey-Forest-Service/ForMOM/wiki/FVS#inputs) for more information on running it.
+This program takes two .csv files specifying a linear optimization problem,
+presumably built with the ForMOM Model Builder, and runs the model.
 
-**Credits**: The actual re-organization process was thought of and developed by Lauren and Courtney, it was only automated by Michael.
+Outputs include
+ - values of decision variables
+ - constraint slacks - how much of the constraint's values are unused
+ - constraint shadow prices - how much bang for your buck do you get from relaxing the constraints
+
+**Credits**: The original csv format was made by Bill, and the converter was written by both Michael and Bill
 
 
+## Running
+
+Python module requirements are in the requirements.txt file. Linear optimization is
+done with Pyomo which may require a system-level installation for the solver.
+Check out the [Pyomo Installation Guide](http://www.pyomo.org/installation) for
+help.
+
+The file to run is launchgui.py.
+
+For more info checkout the [ForMOM Wiki](https://github.com/New-Jersey-Forest-Service/ForMOM/wiki).
