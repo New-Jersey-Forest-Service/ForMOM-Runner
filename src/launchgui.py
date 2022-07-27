@@ -112,7 +112,7 @@ class GuibuildingApp:
 		self.lblfrm_status = ttk.Labelframe(self.im_a_top)
 		self.txt_status = tk.Text(self.lblfrm_status)
 		self.txt_status.configure(undo="true", width=50)
-		_text_ = '	 \n\n\n			888\'Y88	\n			888 ,\'Y  e88 88e  888,8,\n			888C8   d888 888b 888 " \n			888 "   Y888 888P 888   \n			888	  "88 88"  888   \n \n		 e   e	   e88 88e	   e   e\n		d8b d8b	 d888 888b	 d8b d8b\n	   e Y8b Y8b   C8888 8888D   e Y8b Y8b\n	  d8b Y8b Y8b   Y888 888P   d8b Y8b Y8b\n	 d888b Y8b Y8b   "88 88"   d888b Y8b Y8b\n\n  \n'
+		_text_ = '     \n\n\n            888\'Y88    \n            888 ,\'Y  e88 88e  888,8,\n            888C8   d888 888b 888 " \n            888 "   Y888 888P 888   \n            888      "88 88"  888   \n \n         e   e       e88 88e       e   e\n        d8b d8b     d888 888b     d8b d8b\n       e Y8b Y8b   C8888 8888D   e Y8b Y8b\n      d8b Y8b Y8b   Y888 888P   d8b Y8b Y8b\n     d888b Y8b Y8b   "88 88"   d888b Y8b Y8b\n\n  \n'
 		self.txt_status.insert("0.0", _text_)
 		self.txt_status.grid(column=0, padx=10, pady=10, row=0, sticky="nsew")
 		self.lblfrm_status.configure(height=200, text="Status", width=200)
