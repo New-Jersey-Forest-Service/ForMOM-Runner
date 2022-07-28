@@ -7,7 +7,7 @@
 
 # [ ] Touch Ups
  - [ ] Add info in output section about succesful runs
- - [ ] Resizable text box
+ - [x] Resizable text box
  - [ ] Visible scroll bar
 
 

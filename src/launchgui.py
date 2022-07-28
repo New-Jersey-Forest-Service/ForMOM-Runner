@@ -40,7 +40,7 @@ class GuibuildingApp:
 		self.state = GUIState()
 
 		# build ui
-		self.im_a_top = master if master is not None else tk.Tk()
+		self.im_a_top = master if master else tk.Tk()
 		self.frm_title = ttk.Frame(self.im_a_top)
 		self.lbl_title = ttk.Label(self.frm_title)
 		self.lbl_title.configure(text="ForMOM Linear Model Runner")
@@ -112,15 +112,17 @@ class GuibuildingApp:
 		self.frm_actualrunning.columnconfigure(0, minsize=300)
 		self.lblfrm_status = ttk.Labelframe(self.im_a_top)
 		self.txt_status = tk.Text(self.lblfrm_status)
-		self.txt_status.configure(undo="true", width=50)
+		self.txt_status.configure(undo="true", width=70, wrap="word", tabs='  ')
 		_text_ = '     \n\n\n            888\'Y88    \n            888 ,\'Y  e88 88e  888,8,\n            888C8   d888 888b 888 " \n            888 "   Y888 888P 888   \n            888      "88 88"  888   \n \n         e   e       e88 88e       e   e\n        d8b d8b     d888 888b     d8b d8b\n       e Y8b Y8b   C8888 8888D   e Y8b Y8b\n      d8b Y8b Y8b   Y888 888P   d8b Y8b Y8b\n     d888b Y8b Y8b   "88 88"   d888b Y8b Y8b\n\n  \n'
 		self.txt_status.insert("0.0", _text_)
 		self.txt_status.grid(column=0, padx=10, pady=10, row=0, sticky="nsew")
-		self.lblfrm_status.configure(height=200, text="Status", width=200)
+		self.lblfrm_status.configure(height=200, text="Status")
 		self.lblfrm_status.grid(column=1, padx=20, pady=10, row=1, sticky="nsew")
+		self.lblfrm_status.rowconfigure(0, weight=1)
+		self.lblfrm_status.columnconfigure(0, weight=1)
 		self.im_a_top.configure(height=200, padx=10, pady=10, width=200)
-		self.im_a_top.columnconfigure(0, weight=1)
-		self.im_a_top.columnconfigure(1, pad=10)
+		self.im_a_top.rowconfigure(1, weight=1)
+		self.im_a_top.columnconfigure(1, weight=1)
 		self.im_a_top.columnconfigure(2, weight=1)
 
 		# Main widget
