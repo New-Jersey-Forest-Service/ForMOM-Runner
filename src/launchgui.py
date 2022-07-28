@@ -210,8 +210,8 @@ class GuibuildingApp:
 	def onbtn_run_run(self):
 		print("Now do the run")
 
-		datloc = tempfile.NamedTemporaryFile()
-		temppath = pathlib.Path(datloc.name).absolute()
+		datloc = tempfile.NamedTemporaryFile(suffix='.dat')
+		temppath: str = pathlib.Path(datloc.name).__str__()
 
 		converter.writeOutputDat(
 			self.state.loadedModel, 
@@ -220,7 +220,7 @@ class GuibuildingApp:
 			self.state.constFileStr
 			)
 		
-		instance = pyomo_runner.loadPyomoModelFromDat(temppath.name)
+		instance = pyomo_runner.loadPyomoModelFromDat(temppath)
 		instance, res = pyomo_runner.solveConcreteModel(instance)
 		resStr = pyomo_runner.getOutputStr(instance, res)
 

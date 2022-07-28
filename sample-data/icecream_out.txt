@@ -1,0 +1,31 @@
+Solve attempted
+Status: ok
+Termination Condition: optimal
+
+
+
+
+
+
+
+ == Variables
+amnt_caramel         | 8.0
+amnt_vanilla         | 60.0
+amnt_chocolate       | 8.0
+dummy0               | 0.0
+dummy1               | 0.0
+
+ == Shadow Prices
+min_caramel                              | -2.0
+min_chocolate                            | -4.0
+min_vanilla                              | 0.0
+storage                                  | 0.3
+dummyEQ0                                 | 0.0
+
+ == Slacks for GE
+min_caramel                              | 0.0
+min_vanilla                              | 52.0
+min_chocolate                            | 0.0
+
+ == Slacks for LE
+storage                                  | 0.0
