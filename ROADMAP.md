@@ -1,7 +1,8 @@
-# [ ] Minimum Viable Product
+# [~] Minimum Viable Product
  - [x] Take in CSVs
  - [x] Run Model
- - [ ] Save raw outputs
+ - [x] Save raw outputs
+ - [ ] Have someone else on the team run a model
 
 
 # [ ] Touch Ups
