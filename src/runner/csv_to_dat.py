@@ -15,13 +15,8 @@ import csv
 from typing import Union, List
 from pathlib import Path
 
-import model_data_classes as models
+import runner.model_data_classes as models
 
-
-
-# TODO:
-# [ ] Check for Dark / Light theme https://pypi.org/project/darkdetect/
-# [ ]
 
 
 

@@ -1,4 +1,3 @@
-#!/usr/bin/python3
 import time
 import tkinter as tk
 from tkinter import filedialog
@@ -8,14 +7,16 @@ import pathlib
 import os
 import tempfile
 
-import csv_to_dat as converter
-import model_data_classes as model
-import pyomo_runner
+import runner.csv_to_dat as converter
+import runner.model_data_classes as model
+import runner.pyomo_runner as pyomo_runner
+
 import pyomo.environ as pyo
 import pyomo.opt as opt
 
 PATH_DISPLAY_LEN = 35
 CSV_FILES = [('CSV Files','*.csv'), ('All Files','*.*')]
+TXT_FILES = [('Text Files','*.txt'), ('All Files','*.*')]
 
 
 
@@ -39,7 +40,7 @@ class GuibuildingApp:
 		self.state = GUIState()
 
 		# build ui
-		self.im_a_top = master if master is not None else tk.Tk()
+		self.im_a_top = master if master else tk.Tk()
 		self.frm_title = ttk.Frame(self.im_a_top)
 		self.lbl_title = ttk.Label(self.frm_title)
 		self.lbl_title.configure(text="ForMOM Linear Model Runner")
@@ -111,15 +112,17 @@ class GuibuildingApp:
 		self.frm_actualrunning.columnconfigure(0, minsize=300)
 		self.lblfrm_status = ttk.Labelframe(self.im_a_top)
 		self.txt_status = tk.Text(self.lblfrm_status)
-		self.txt_status.configure(undo="true", width=50)
-		_text_ = '	 \n\n\n			888\'Y88	\n			888 ,\'Y  e88 88e  888,8,\n			888C8   d888 888b 888 " \n			888 "   Y888 888P 888   \n			888	  "88 88"  888   \n \n		 e   e	   e88 88e	   e   e\n		d8b d8b	 d888 888b	 d8b d8b\n	   e Y8b Y8b   C8888 8888D   e Y8b Y8b\n	  d8b Y8b Y8b   Y888 888P   d8b Y8b Y8b\n	 d888b Y8b Y8b   "88 88"   d888b Y8b Y8b\n\n  \n'
+		self.txt_status.configure(undo="true", width=70, wrap="word", tabs='  ')
+		_text_ = '     \n\n\n            888\'Y88    \n            888 ,\'Y  e88 88e  888,8,\n            888C8   d888 888b 888 " \n            888 "   Y888 888P 888   \n            888      "88 88"  888   \n \n         e   e       e88 88e       e   e\n        d8b d8b     d888 888b     d8b d8b\n       e Y8b Y8b   C8888 8888D   e Y8b Y8b\n      d8b Y8b Y8b   Y888 888P   d8b Y8b Y8b\n     d888b Y8b Y8b   "88 88"   d888b Y8b Y8b\n\n  \n'
 		self.txt_status.insert("0.0", _text_)
 		self.txt_status.grid(column=0, padx=10, pady=10, row=0, sticky="nsew")
-		self.lblfrm_status.configure(height=200, text="Status", width=200)
+		self.lblfrm_status.configure(height=200, text="Status")
 		self.lblfrm_status.grid(column=1, padx=20, pady=10, row=1, sticky="nsew")
+		self.lblfrm_status.rowconfigure(0, weight=1)
+		self.lblfrm_status.columnconfigure(0, weight=1)
 		self.im_a_top.configure(height=200, padx=10, pady=10, width=200)
-		self.im_a_top.columnconfigure(0, weight=1)
-		self.im_a_top.columnconfigure(1, pad=10)
+		self.im_a_top.rowconfigure(1, weight=1)
+		self.im_a_top.columnconfigure(1, weight=1)
 		self.im_a_top.columnconfigure(2, weight=1)
 
 		# Main widget
@@ -154,6 +157,9 @@ class GuibuildingApp:
 
 
 	def onbtn_import_const(self):
+		'''
+			Select constraint file with csv chooser
+		'''
 		constrFileStr = filedialog.askopenfilename(
 			filetypes=CSV_FILES,
 			defaultextension=CSV_FILES
@@ -206,8 +212,8 @@ class GuibuildingApp:
 	def onbtn_run_run(self):
 		print("Now do the run")
 
-		datloc = tempfile.NamedTemporaryFile()
-		temppath = pathlib.Path(datloc.name).absolute()
+		datloc = tempfile.NamedTemporaryFile(suffix='.dat')
+		temppath: str = pathlib.Path(datloc.name).__str__()
 
 		converter.writeOutputDat(
 			self.state.loadedModel, 
@@ -230,7 +236,27 @@ class GuibuildingApp:
 
 
 	def onbtn_output_save(self):
-		pass
+		'''
+		Select a text file to output everything to.
+		'''
+		outputTxtFileStr = filedialog.asksaveasfilename(
+			filetypes=TXT_FILES,
+			defaultextension=TXT_FILES
+		)
+		msg = ''
+
+		if isInvalidFile(outputTxtFileStr):
+			msg = "[[ XX Error ]]\nInvalid output file"
+		else:
+			runOut = pyomo_runner.getOutputStr(self.state.runInstance, self.state.runResult)
+			with open(outputTxtFileStr, 'w') as f:
+				f.write(runOut)
+			
+			msg = f"[[ Success]]\n\nWrote to file {outputTxtFileStr}"
+			self._write_new_status("Unable to output")
+
+		self._write_new_status(msg)
+		self._redraw_dynamics()
 
 	
 	def _write_new_status(self, msg_str: str):
@@ -362,20 +388,28 @@ def shrinkPathString(pathstr: str) -> str:
 		return '...' + pathstr[3 - PATH_DISPLAY_LEN:]
 
 
-
-if __name__ == "__main__":
+def launchgui():
 	# Setup root
 	root = tk.Tk()
 	root.option_add("*tearOff", False)
 	root.title("ForMOM - Linear Model Runner")
 
 	# Load theme
-	style = ttk.Style(root)
+	#style = ttk.Style(root)
 
-	os.chdir(pathlib.Path(__file__).parent)
-	root.tk.call("source", "./theme/forest-light.tcl")
-	style.theme_use("forest-light")
+	#os.chdir(pathlib.Path(__file__).parent)
+	#root.tk.call("source", "../theme/forest-light.tcl")
+	#style.theme_use("forest-light")
 
 	# Build the app and run
 	app = GuibuildingApp(root)
 	app.run()
+
+
+
+if __name__ == "__main__":
+	launchgui()
+
+
+
+
