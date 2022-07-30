@@ -6,6 +6,7 @@ import attrs
 import pathlib
 import os
 import tempfile
+import zipfile
 
 import runner.csv_to_dat as converter
 import runner.model_data_classes as model
@@ -389,21 +390,75 @@ def shrinkPathString(pathstr: str) -> str:
 
 
 def launchgui():
+	print("Hello 👋")
+
 	# Setup root
 	root = tk.Tk()
 	root.option_add("*tearOff", False)
 	root.title("ForMOM - Linear Model Runner")
 
 	# Load theme
-	#style = ttk.Style(root)
-
-	#os.chdir(pathlib.Path(__file__).parent)
-	#root.tk.call("source", "../theme/forest-light.tcl")
-	#style.theme_use("forest-light")
+	if ('.pyz' in __file__ or '.zip' in __file__):
+		loadtheme_insidezip(root)
+	else:
+		loadtheme_unzipped(root)
 
 	# Build the app and run
 	app = GuibuildingApp(root)
 	app.run()
+
+
+def loadtheme_insidezip (root: tk.Tk):
+	'''
+	Loads the theme when the python file is inside a zip
+
+	In the case of failure, no theme is used
+	'''
+	# When loading the theme, tcl needs to access an actual file
+	# but when this program is built, it's inside a zip (.pyz).
+	# So, we unzip the theme folder within the .pyz into a temp 
+	# folder and send it to tcl,
+	#
+	# -\_(*_*)_/-
+	style = ttk.Style(root)
+
+	try:
+		zip_dir = pathlib.Path(os.path.join(__file__, '..', '..')).resolve().absolute()
+
+		with tempfile.TemporaryDirectory() as tmpdirname:
+			# Extract into temp folder
+			with zipfile.ZipFile(zip_dir, "r") as zip_ref:
+				for file in zip_ref.namelist():
+					if file.startswith('theme/'):
+						zip_ref.extract(file, tmpdirname)
+			
+			# Feed it to tcl
+			theme_path = os.path.join(tmpdirname, 'theme', 'forest-light.tcl')
+			root.tk.call("source", theme_path)
+
+		style.theme_use("forest-light")
+
+	finally:
+		return
+
+
+def loadtheme_unzipped (root: tk.Tk):
+	'''
+	Loads the theme using relative paths 
+	for when the application is not zipped
+	'''
+	style = ttk.Style(root)
+
+	theme_path = pathlib.Path(os.path.join(
+			__file__, 
+			'..', 
+			'..', 
+			'theme', 
+			'forest-light.tcl'))
+	theme_path = theme_path.resolve().absolute()
+
+	root.tk.call("source", str(theme_path))
+	style.theme_use("forest-light")
 
 
 
