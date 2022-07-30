@@ -9,7 +9,7 @@ import tempfile
 
 import runner.csv_to_dat as converter
 import runner.model_data_classes as model
-import runner.pyomo_runner
+import runner.pyomo_runner as pyomo_runner
 
 import pyomo.environ as pyo
 import pyomo.opt as opt
