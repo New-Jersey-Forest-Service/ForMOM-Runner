@@ -10,6 +10,9 @@ FINAL_NAME="ForMOM_Runner"
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd $SCRIPT_DIR
+# Checks for directory and makes it if not
+[[ -d /build/ ]] || mkdir build
+cd ./build
 
 # Step 1 - copy over src
 echo
