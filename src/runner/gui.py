@@ -1,4 +1,3 @@
-#!/usr/bin/python3
 import time
 import tkinter as tk
 from tkinter import filedialog
@@ -8,9 +7,10 @@ import pathlib
 import os
 import tempfile
 
-import csv_to_dat as converter
-import model_data_classes as model
-import pyomo_runner
+import runner.csv_to_dat as converter
+import runner.model_data_classes as model
+import runner.pyomo_runner
+
 import pyomo.environ as pyo
 import pyomo.opt as opt
 
@@ -388,20 +388,28 @@ def shrinkPathString(pathstr: str) -> str:
 		return '...' + pathstr[3 - PATH_DISPLAY_LEN:]
 
 
-
-if __name__ == "__main__":
+def launchgui():
 	# Setup root
 	root = tk.Tk()
 	root.option_add("*tearOff", False)
 	root.title("ForMOM - Linear Model Runner")
 
 	# Load theme
-	style = ttk.Style(root)
+	#style = ttk.Style(root)
 
-	os.chdir(pathlib.Path(__file__).parent)
-	root.tk.call("source", "./theme/forest-light.tcl")
-	style.theme_use("forest-light")
+	#os.chdir(pathlib.Path(__file__).parent)
+	#root.tk.call("source", "../theme/forest-light.tcl")
+	#style.theme_use("forest-light")
 
 	# Build the app and run
 	app = GuibuildingApp(root)
 	app.run()
+
+
+
+if __name__ == "__main__":
+	launchgui()
+
+
+
+
