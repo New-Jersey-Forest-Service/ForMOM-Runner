@@ -17,6 +17,7 @@ cd ./build
 echo
 echo "[[ Copying /src/ ]]"
 
+[[ -d ./src/ ]] || mkdir src
 cp -R ../src/** ./src/
 
 
