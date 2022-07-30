@@ -21,6 +21,9 @@ done with Pyomo which may require a system-level installation for the solver.
 Check out the [Pyomo Installation Guide](http://www.pyomo.org/installation) for
 help.
 
-The file to run is launchgui.py.
+The file to run is __main__.py, located in src.
+
+Additionally, the software can be run from the main [ForMOM repo](https://github.com/New-Jersey-Forest-Service/ForMOM)
+by executing the .pyz file located in the [software folder](https://github.com/New-Jersey-Forest-Service/ForMOM/tree/main/software).
 
 For more info checkout the [ForMOM Wiki](https://github.com/New-Jersey-Forest-Service/ForMOM/wiki).
