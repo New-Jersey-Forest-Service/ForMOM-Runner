@@ -17,7 +17,6 @@ from typing import Union
 import pyomo.environ as pyo
 import pyomo.opt as opt
 
-#Path for input file
 
 # In Python2, integer divisions truncate values (1/2 = 0 instead of 0.5)
 # which breaks the solver. Either way, we should be using python3
@@ -71,7 +70,7 @@ def loadPyomoModelFromDat (datFilepath: str) -> pyo.ConcreteModel:
 	instance = model.create_instance(filename=datFilepath)
 
 	# Add duals (shadow cost) info 
-	# ong I have no idea why duals are the same as shadow costs, but they are so we good
+	# I have no idea why duals are the same as shadow costs, but they are
 	instance.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT_EXPORT)
 
 	return instance
