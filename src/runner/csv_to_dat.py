@@ -66,6 +66,8 @@ def openAndReadConstraintCSV (constFilepath: Path) -> models.InputConstraintData
 		lineCount = 0
 
 		for row in constCSVReader:
+			if len(row) == 0:
+				continue
 			row = [str(x).strip() for x in row]
 			lineCount += 1
 
