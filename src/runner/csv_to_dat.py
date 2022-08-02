@@ -282,6 +282,43 @@ def lintInputData (objData: models.InputObjectiveData, constData: models.InputCo
 		warningList.append(f'No {op.upper()} constraint found, adding variables' +
 						   f' "{dumVar1}", "{dumVar2}" and constraint "{dumConstName}"')
 
+
+	# [ Check ]: Objective file lengths match up
+	num_vars = len(objData.var_names)
+	if num_vars != len(objData.obj_coeffs):
+		return None, None, [f"Differen number of coefficients ({len(objData.obj_coeffs)}) to number of variables ({num_vars})"]
+
+	# [ Check & Fix ]: Cast Objective Function to floats
+	for ind in range(num_vars):
+		objData.var_names[ind] = str(objData.var_names[ind])
+		try:
+			objData.obj_coeffs[ind] = float(objData.obj_coeffs[ind])
+		except ValueError:
+			return None, None, [f"Found non-float in objective function: {objData.obj_coeffs[ind]}"]
+	
+
+	# [ Check ]: Constraint array lengths match 
+	num_constrs = len(constData.const_names)
+	if num_constrs != len(constData.vec_const_bounds) or \
+		num_constrs != len(constData.vec_operators) or \
+		num_constrs != len(constData.mat_constraint_coeffs):
+			return None, None, [f"Found mismatch between number of constraint names, number of bounds (right hand sides), number of operators, and number of rows in matrix"]
+
+	# [ Check & Fix ]: Cast Constraint Data to floats
+	_errMsg = 'Constraint matrix contains non-float '
+	for ind in range(num_constrs):
+		try:
+			constData.vec_const_bounds[ind] = float(constData.vec_const_bounds[ind])
+		except ValueError:
+			return None, None, [_errMsg + f"{constData.vec_const_bounds[ind]}"]
+		
+		for varind in range(len(constData.var_names)):
+			try:
+				constData.mat_constraint_coeffs[ind][varind] = float(constData.mat_constraint_coeffs[ind][varind])
+			except ValueError:
+				return None, None, [_errMsg + f"{constData.mat_constraint_coeffs[ind][varind]}"]
+	
+
 	return objData, constData, warningList
 
 
