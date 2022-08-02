@@ -213,24 +213,29 @@ class GuibuildingApp:
 	def onbtn_run_run(self):
 		print("Now do the run")
 
-		datloc = tempfile.NamedTemporaryFile(suffix='.dat')
-		temppath: str = pathlib.Path(datloc.name).__str__()
+		#
+		# Tempfile based running:
+		# datloc = tempfile.NamedTemporaryFile(suffix='.dat', delete=False)
+		# temppath: str = pathlib.Path(datloc.name).__str__()
+		# datloc.close()
+		# converter.writeOutputDat(
+		# 	self.state.loadedModel, 
+		# 	temppath,
+		# 	self.state.objFileStr,
+		# 	self.state.constFileStr
+		# 	)
+		# instance = pyomo_runner.loadPyomoModelFromDat(temppath)
 
-		converter.writeOutputDat(
-			self.state.loadedModel, 
-			temppath,
-			self.state.objFileStr,
-			self.state.constFileStr
-			)
-		
-		instance = pyomo_runner.loadPyomoModelFromDat(temppath)
+		#
+		# Dict-based Running
+		datadict = converter.convertFinalModelToDataDict(self.state.loadedModel)
+		instance = pyomo_runner.loadPyomoModelFromFinalModel(datadict)
 		instance, res = pyomo_runner.solveConcreteModel(instance)
+
 		resStr = pyomo_runner.getOutputStr(instance, res)
 
 		self.state.runInstance = instance
 		self.state.runResult = res
-
-		datloc.close()
 
 		self._write_new_status(resStr)
 		self._redraw_dynamics()

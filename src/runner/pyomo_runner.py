@@ -25,9 +25,11 @@ if (sys.version[0] != '3'):
 	sys.exit(1)
 
 
-
-def loadPyomoModelFromDat (datFilepath: str) -> pyo.ConcreteModel:
-	# Below we instantiate the model
+# Really this abstract model should be built once at init
+# instead of by calling a function, but the overhead is so low
+# it doesn't really matter.
+def _buildAbstractModel () -> pyo.AbstractModel:
+	# Build the model
 	model = pyo.AbstractModel()
 	model.index_vars = pyo.Set()
 	model.index_le_consts = pyo.Set()
@@ -65,6 +67,19 @@ def loadPyomoModelFromDat (datFilepath: str) -> pyo.ConcreteModel:
 	model.GEConstraint = pyo.Constraint(model.index_ge_consts, rule=ge_mat_rule)
 	model.LEConstraint = pyo.Constraint(model.index_le_consts, rule=le_mat_rule)
 	model.EQConstraint = pyo.Constraint(model.index_eq_consts, rule=eq_mat_rule)
+
+	return model
+
+
+def loadPyomoModelFromFinalModel (datadict: dict):
+	model = _buildAbstractModel()
+	instance = model.create_instance(data=datadict)
+	instance.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT_EXPORT)
+	return instance
+
+
+def loadPyomoModelFromDat (datFilepath: str) -> pyo.ConcreteModel:
+	model = _buildAbstractModel()
 
 	# Now read data file
 	instance = model.create_instance(filename=datFilepath)
