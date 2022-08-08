@@ -172,7 +172,7 @@ def getOutputStr (instance: pyo.ConcreteModel, results: opt.SolverResults) -> st
 
 
 if __name__ == '__main__':
-	filepath = '/home/velcro/Documents/Professional/NJDEP/TechWork/ForMOM/MiniModelRunning/run2/out.dat'
+	filepath = '/home/velcro/Documents/Professional/NJDEP/TechWork/ForMOM-Runner/sample-data/SLmonthly1_out.dat'
 	instance = loadPyomoModelFromDat(filepath)
 	instance, res = solveConcreteModel(instance)
 	resStr = getOutputStr(instance, res)

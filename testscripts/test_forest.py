@@ -25,7 +25,7 @@ root.rowconfigure(index=2, weight=1)
 style = ttk.Style(root)
 
 # Import the tcl file
-root.tk.call("source", "./theme/forest-light.tcl")
+root.tk.call("source", "../src/theme/forest-light.tcl")
 
 # Set the theme with the theme_use method
 style.theme_use("forest-light")
