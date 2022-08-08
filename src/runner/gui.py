@@ -19,6 +19,7 @@ PATH_DISPLAY_LEN = 35
 CSV_FILES = [('CSV Files','*.csv'), ('All Files','*.*')]
 TXT_FILES = [('Text Files','*.txt'), ('All Files','*.*')]
 
+NO_FILE_SEL = 'No File Selected'
 
 
 @attrs.define
@@ -148,7 +149,7 @@ class GuibuildingApp:
 		# TODO: Improve behaviour by checking if previous selection
 		# is valid, so that selecting nothing doesn't clear everything
 		if isInvalidFile(objFileStr):
-			self.lbl_objpath.config(text="No file selected")
+			self.lbl_objpath.config(text=NO_FILE_SEL)
 			self.state.objFileStr = ""
 		else:
 			self.lbl_objpath.config(text=shrinkPathString(objFileStr))
@@ -169,7 +170,7 @@ class GuibuildingApp:
 		# TODO: Improve behaviour by checking if previous selection
 		# is valid, so that selecting nothing doesn't clear everything
 		if isInvalidFile(constrFileStr):
-			self.lbl_constpath.config(text="No file selected")
+			self.lbl_constpath.config(text=NO_FILE_SEL)
 			self.state.constFileStr = ""
 		else:
 			self.lbl_constpath.config(text=shrinkPathString(constrFileStr))
