@@ -25,9 +25,11 @@ if (sys.version[0] != '3'):
 	sys.exit(1)
 
 
-
-def loadPyomoModelFromDat (datFilepath: str) -> pyo.ConcreteModel:
-	# Below we instantiate the model
+# Really this abstract model should be built once at init
+# instead of by calling a function, but the overhead is so low
+# it doesn't really matter.
+def _buildAbstractModel () -> pyo.AbstractModel:
+	# Build the model
 	model = pyo.AbstractModel()
 	model.index_vars = pyo.Set()
 	model.index_le_consts = pyo.Set()
@@ -66,6 +68,19 @@ def loadPyomoModelFromDat (datFilepath: str) -> pyo.ConcreteModel:
 	model.LEConstraint = pyo.Constraint(model.index_le_consts, rule=le_mat_rule)
 	model.EQConstraint = pyo.Constraint(model.index_eq_consts, rule=eq_mat_rule)
 
+	return model
+
+
+def loadPyomoModelFromFinalModel (datadict: dict):
+	model = _buildAbstractModel()
+	instance = model.create_instance(data=datadict)
+	instance.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT_EXPORT)
+	return instance
+
+
+def loadPyomoModelFromDat (datFilepath: str) -> pyo.ConcreteModel:
+	model = _buildAbstractModel()
+
 	# Now read data file
 	instance = model.create_instance(filename=datFilepath)
 
@@ -95,6 +110,9 @@ def getOutputStr (instance: pyo.ConcreteModel, results: opt.SolverResults) -> st
 	# Check status of model
 	status = results.solver.status
 	termination_cond = results.solver.termination_condition
+
+	# List of possible status & term conditions
+	# https://github.com/Pyomo/pyomo/blob/main/pyomo/opt/results/solver.py
 
 	rstr += f"Solve attempted\n"
 	rstr += f"Status: {status}\n"
@@ -157,7 +175,7 @@ def getOutputStr (instance: pyo.ConcreteModel, results: opt.SolverResults) -> st
 
 
 if __name__ == '__main__':
-	filepath = '/home/velcro/Documents/Professional/NJDEP/TechWork/ForMOM/MiniModelRunning/run2/out.dat'
+	filepath = '/home/velcro/Documents/Professional/NJDEP/TechWork/ForMOM-Runner/sample-data/SLmonthly1_out.dat'
 	instance = loadPyomoModelFromDat(filepath)
 	instance, res = solveConcreteModel(instance)
 	resStr = getOutputStr(instance, res)

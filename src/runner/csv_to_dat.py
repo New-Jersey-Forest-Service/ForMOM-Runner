@@ -10,6 +10,7 @@ William Zipse
 NJDEP
 '''
 
+import pprint
 import sys
 import csv
 from typing import Union, List
@@ -66,6 +67,8 @@ def openAndReadConstraintCSV (constFilepath: Path) -> models.InputConstraintData
 		lineCount = 0
 
 		for row in constCSVReader:
+			if len(row) == 0:
+				continue
 			row = [str(x).strip() for x in row]
 			lineCount += 1
 
@@ -92,6 +95,11 @@ def openAndReadConstraintCSV (constFilepath: Path) -> models.InputConstraintData
 
 
 def convertInputToFinalModel (objData: models.InputObjectiveData, constData: models.InputConstraintData) -> models.FinalModel:
+	'''
+	DOES NOT LINT. It is expected that objData and constData were linted by lintInputData(...).
+
+	Combines objective & constraint data into a final model.
+	'''
 	# All the lists to populate
 	var_names = []
 	obj_coeffs = []
@@ -174,9 +182,6 @@ def lintInputData (objData: models.InputObjectiveData, constData: models.InputCo
 	objVars = objData.var_names
 	constVars = constData.var_names
 	warningList = []
-
-	# TODO: Check that all values are floats, strings, etc
-	# TODO: Check that the lists have correct lengths
 
 
 	# [ Check ]: No duplicate or unnamed variables
@@ -276,6 +281,43 @@ def lintInputData (objData: models.InputObjectiveData, constData: models.InputCo
 
 		warningList.append(f'No {op.upper()} constraint found, adding variables' +
 						   f' "{dumVar1}", "{dumVar2}" and constraint "{dumConstName}"')
+
+
+	# [ Check ]: Objective file lengths match up
+	num_vars = len(objData.var_names)
+	if num_vars != len(objData.obj_coeffs):
+		return None, None, [f"Differen number of coefficients ({len(objData.obj_coeffs)}) to number of variables ({num_vars})"]
+
+	# [ Check & Fix ]: Cast Objective Function to floats
+	for ind in range(num_vars):
+		objData.var_names[ind] = str(objData.var_names[ind])
+		try:
+			objData.obj_coeffs[ind] = float(objData.obj_coeffs[ind])
+		except ValueError:
+			return None, None, [f"Found non-float in objective function: {objData.obj_coeffs[ind]}"]
+	
+
+	# [ Check ]: Constraint array lengths match 
+	num_constrs = len(constData.const_names)
+	if num_constrs != len(constData.vec_const_bounds) or \
+		num_constrs != len(constData.vec_operators) or \
+		num_constrs != len(constData.mat_constraint_coeffs):
+			return None, None, [f"Found mismatch between number of constraint names, number of bounds (right hand sides), number of operators, and number of rows in matrix"]
+
+	# [ Check & Fix ]: Cast Constraint Data to floats
+	_errMsg = 'Constraint matrix contains non-float '
+	for ind in range(num_constrs):
+		try:
+			constData.vec_const_bounds[ind] = float(constData.vec_const_bounds[ind])
+		except ValueError:
+			return None, None, [_errMsg + f"{constData.vec_const_bounds[ind]}"]
+		
+		for varind in range(len(constData.var_names)):
+			try:
+				constData.mat_constraint_coeffs[ind][varind] = float(constData.mat_constraint_coeffs[ind][varind])
+			except ValueError:
+				return None, None, [_errMsg + f"{constData.mat_constraint_coeffs[ind][varind]}"]
+	
 
 	return objData, constData, warningList
 
@@ -380,10 +422,85 @@ def getNextAvailableDummyName (nameList: List[str], nameBase: str, startInd: int
 
 
 
+# ======================================================
+#                 Converting to Dicts
+# ======================================================
+
+def convertFinalModelToDataDict (modeldata: models.FinalModel):
+	'''
+	Converts a FinalModel object into a dictionary that pyomo can read.
+	'''
+	fm = modeldata
+
+	vec_obj = {}
+	for var, coef in zip(fm.var_names, fm.obj_coeffs):
+		vec_obj[var] = coef
+	
+	vec_le = {}
+	for constr, coef in zip(fm.le_const_names, fm.le_vec):
+		vec_le[constr] = coef
+
+	vec_ge = {}
+	for constr, coef in zip(fm.ge_const_names, fm.ge_vec):
+		vec_ge[constr] = coef
+
+	vec_eq = {}
+	for constr, coef in zip(fm.eq_const_names, fm.eq_vec):
+		vec_eq[constr] = coef
+	
+	mat_le = {}
+	for ind, constr in enumerate(fm.le_const_names):
+		for varind, value in enumerate(fm.le_mat[ind]):
+			varname = fm.var_names[varind]
+			mat_le[(constr, varname)] = value
+	
+	mat_ge = {}
+	for ind, constr in enumerate(fm.ge_const_names):
+		for varind, value in enumerate(fm.ge_mat[ind]):
+			varname = fm.var_names[varind]
+			mat_ge[(constr, varname)] = value
+	
+	mat_eq = {}
+	for ind, constr in enumerate(fm.eq_const_names):
+		for varind, value in enumerate(fm.eq_mat[ind]):
+			varname = fm.var_names[varind]
+			mat_eq[(constr, varname)] = value
+
+	datadict = { None:{
+		'index_vars': {None: fm.var_names},
+		'index_le_consts': {None: fm.le_const_names},
+		'index_ge_consts': {None: fm.ge_const_names},
+		'index_eq_consts': {None: fm.eq_const_names},
+		'vec_objective': vec_obj,
+		'mat_le': mat_le,
+		'vec_le': vec_le,
+		'mat_ge': mat_ge,
+		'vec_ge': vec_ge,
+		'mat_eq': mat_eq,
+		'vec_eq': vec_eq
+	} }
+
+	print("Did model -> dict conversion")
+	# pprint.pprint(datadict)
+
+	return datadict
+
+
+
+
+
+
+
+
 
 # ======================================================
 #                  Writing to .dat
 # ======================================================
+#
+# This code is now very vestigial, because the Pyomo
+# model is populated with dictionaries now, instead of
+# by file.
+#
 
 def writeOutputDat (modelData: models.FinalModel, outputFilepath: str, objFilepath: str, constFilepath: str):
 	md = modelData

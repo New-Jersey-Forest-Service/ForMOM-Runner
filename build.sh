@@ -4,21 +4,21 @@
 #  1) copies /src/ into here
 #  2) installs dependencies (from requirements.txt) into /src/
 #  3) bundles everything as a zipapp
-#  4) delete the /src/ & env files
 
 FINAL_NAME="ForMOM_Runner"
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd $SCRIPT_DIR
 # Checks for directory and makes it if not
-[[ -d /build/ ]] || mkdir build
+[[ -d ./build/ ]] || mkdir build
 cd ./build
 
 # Step 1 - copy over src
 echo
 echo "[[ Copying /src/ ]]"
 
-cp -R ../src/ ./src
+[[ -d ./src/ ]] || mkdir src
+cp -R ../src/** ./src/
 
 
 # Step 2 - install dependenecs
@@ -33,12 +33,4 @@ echo
 echo "[[ Bundling with zipapp ]]"
 
 python3.8 -m zipapp src --output $FINAL_NAME.pyz
-
-
-# Step 4 - clean up
-echo
-echo "[[ Clean up copied source files ]]"
-
-rm -rf ./src/**
-rmdir ./src
 
