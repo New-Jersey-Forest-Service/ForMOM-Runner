@@ -432,11 +432,10 @@ class GuibuildingApp:
 
 		# With a single run, output the results to the status
 		if not self.state.multipleObjFiles:
-			resStr = pyomo_runner.getOutputStr(instance, res)
+			inst = self.state.runInstances[0]
+			res = self.state.runResults[0]
 
-			self.state.runInstances = instance
-			self.state.runResults = res
-
+			resStr = pyomo_runner.getOutputStr(inst, res)
 			self._write_new_status(resStr)
 
 		# Otherwise, create a summary
@@ -507,6 +506,8 @@ class GuibuildingApp:
 
 		if isInvalidFile(outputTxtFileStr):
 			return "[[ XX Error ]]\nInvalid output file"
+		
+		print(self.state.runInstances)
 
 		instance = self.state.runInstances[0]
 		result = self.state.runResults[0]
