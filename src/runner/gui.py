@@ -51,6 +51,7 @@ class GuibuildingApp:
 		# state variable
 		self.state = GUIState()
 
+		# build ui
 		self.im_a_top = master if master else tk.Tk()
 		self.frm_title = ttk.Frame(self.im_a_top)
 		self.lbl_title = ttk.Label(self.frm_title)
@@ -143,10 +144,16 @@ class GuibuildingApp:
 		self.frm_actualrunning.columnconfigure(0, minsize=300, weight=1)
 		self.lblfrm_status = ttk.Labelframe(self.im_a_top)
 		self.txt_status = tk.Text(self.lblfrm_status)
-		self.txt_status.configure(undo="true", width=70, wrap="word")
+		self.txt_status.configure(
+			blockcursor="false", undo="true", width=70, wrap="word"
+		)
 		_text_ = text.SPLASH_STRING
 		self.txt_status.insert("0.0", _text_)
 		self.txt_status.grid(column=0, padx=10, pady=10, row=0, sticky="nsew")
+		self.scroll_status = ttk.Scrollbar(self.lblfrm_status, command=self.txt_status.yview)
+		self.scroll_status.configure(orient="vertical")
+		self.scroll_status.grid(column=1, row=0, sticky="ns")
+		self.txt_status['yscrollcommand'] = self.scroll_status.set
 		self.lblfrm_status.configure(height=200, text="Status")
 		self.lblfrm_status.grid(column=1, padx=20, pady=10, row=1, sticky="nsew")
 		self.lblfrm_status.rowconfigure(0, weight=1)
