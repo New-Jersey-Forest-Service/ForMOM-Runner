@@ -35,6 +35,7 @@ class GUIState:
 
 	# We store arrays of everything. In the case of a single
 	# objective file, we just use the first index
+	objFilenames: List[str] = None
 	loadedModels: List[model.FinalModel] = None
 	runInstances: List[pyo.ConcreteModel] = None
 	runResults: List[opt.SolverResults] = None
@@ -279,6 +280,7 @@ class GuibuildingApp:
 		warnings_found: Set[str] = set()
 		errors_found: Set[str] = set()
 
+		self.state.objFilenames = []
 		self.state.loadedModels = []
 
 		for p in pathlib.Path(self.state.objFileDirStr).glob('*.csv'):
@@ -301,6 +303,8 @@ class GuibuildingApp:
 					# Perfect file
 					perfect_files.append(p.name)
 				
+				self.state.objFilenames.append(p.name)
+
 				self.state.loadedModels.append(
 					converter.convertInputToFinalModel(
 						objData=objData,
@@ -416,18 +420,33 @@ class GuibuildingApp:
 		# 	)
 		# instance = pyomo_runner.loadPyomoModelFromDat(temppath)
 
-		#
-		# Dict-based Running
-		datadict = converter.convertFinalModelToDataDict(self.state.loadedModels)
-		instance = pyomo_runner.loadPyomoModelFromFinalModel(datadict)
-		instance, res = pyomo_runner.solveConcreteModel(instance)
+		self.state.runInstances = []
+		self.state.runResults = []
 
-		resStr = pyomo_runner.getOutputStr(instance, res)
+		# Run all the models
+		for lm in self.state.loadedModels:
+			datadict = converter.convertFinalModelToDataDict(lm)
+			instance = pyomo_runner.loadPyomoModelFromFinalModel(datadict)
+			instance, res = pyomo_runner.solveConcreteModel(instance)
 
-		self.state.runInstances = instance
-		self.state.runResults = res
+			self.state.runInstances.append(instance)
+			self.state.runResults.append(res)
 
-		self._write_new_status(resStr)
+		# With a single run, output the results to the status
+		if not self.state.multipleObjFiles:
+			resStr = pyomo_runner.getOutputStr(instance, res)
+
+			self.state.runInstances = instance
+			self.state.runResults = res
+
+			self._write_new_status(resStr)
+
+		# Otherwise, create a summary
+		else:
+			# TODO:
+			statusStr = "Poopa loop"
+			self._write_new_status(statusStr)
+		
 		self._redraw_dynamics()
 
 
