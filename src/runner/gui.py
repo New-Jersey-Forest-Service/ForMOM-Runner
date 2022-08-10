@@ -74,7 +74,7 @@ class GuibuildingApp:
 		self.btn_constcsv.grid(column=0, ipadx=2, ipady=2, padx=5, row=2, sticky="ew")
 		self.btn_constcsv.configure(command=self.onbtn_import_const)
 		self.btn_loadmodel = ttk.Button(self.lblfrm_import)
-		self.btn_loadmodel.configure(text="Load Model")
+		self.btn_loadmodel.configure(text="Load")
 		self.btn_loadmodel.grid(
 			column=0, columnspan=2, ipadx=10, ipady=5, padx=10, pady=10, row=3
 		)
@@ -264,6 +264,9 @@ class GuibuildingApp:
 			status_str = self._load_dir_of_objective()
 		else:
 			status_str = self._load_single_obj()
+
+		# reset any existing results
+		self.state.runResults = None
 
 		self._write_new_status(status_str)
 		self._redraw_dynamics()
@@ -658,6 +661,9 @@ class GuibuildingApp:
 			self.btn_loadmodel['style'] = 'Accent.TButton'
 		
 		else:
+			# We reset all state for future steps
+			self.state.loadedModels = None
+			self.state.runResults = None
 			return
 
 
@@ -684,6 +690,7 @@ class GuibuildingApp:
 			self.lbl_run_modelstats.configure(text=model_str)
 		
 		else:
+			self.state.runResults = None
 			return
 		
 

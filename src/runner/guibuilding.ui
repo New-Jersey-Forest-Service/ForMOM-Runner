@@ -111,7 +111,7 @@
             <child>
               <object class="ttk.Button" id="btn_loadmodel">
                 <property name="command" type="command" cbtype="simple">onbtn_import_load</property>
-                <property name="text" translatable="yes">Load Model</property>
+                <property name="text" translatable="yes">Load</property>
                 <layout manager="grid">
                   <property name="column">0</property>
                   <property name="columnspan">2</property>
