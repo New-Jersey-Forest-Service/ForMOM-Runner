@@ -31,7 +31,9 @@ class GUIState:
 	objFileDirStr: str = ""
 	constFileStr: str = ""
 
-	# TODO: This is probably REALLY BAD for memory but optimization is for later
+	# TODO: This is kinda bad but tolerable for memory. Quantified numbers live in 
+	# 		memory.txt. In the future, this should be changed so we only ever store 
+	# 		a single model in memory.
 
 	# We store arrays of everything. In the case of a single
 	# objective file, we just use the first index

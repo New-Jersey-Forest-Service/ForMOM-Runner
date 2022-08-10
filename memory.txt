@@ -1,0 +1,39 @@
+Here are some memory usage statistics, gathered with Fil-Profiler
+
+A/o Aug 10 2022, where all runs and outputs are stored in memory.
+
+0 var, 0 constraints (Loading the program)
+- 19.1 MiB
+
+62 var, 54 constraints, 1 objectives
+- 20.5, 20.5 MiB (two seperate program open and closes)
+
+62 var, 54 constraints, 400 objectives
+- 238.9 MiB
+
+62 var, 54 constraints, 200 objectives
+- 130.9 MiB (running once)
+- 149.5 MiB (running twice)
+
+
+Because every single model is stored in python memory, it
+should be roughly proportional to # vars * # constriants * # objectives
+
+This gets us this table
+Var * Constr * Obj	| Memory (MiB)
+0	                | 19.1
+3348	            | 20.5
+3348	            | 20.5
+657200	            | 130.9
+1339200	            | 248.9
+
+And doing some regression, we get
+memory ~=~ 0.000171 * x + 19.5
+(R^2 = 1 but that's because the data is very incomplete)
+
+For the full MiniModel we'll have approximately
+ - 1000 vars
+ - 870 constrs (assuming similar ratio)
+
+Then, it will mean 168.27 MiB per run. So, really, it is a good idea
+to _not_ load everything into memory, but that will be a future fix.
