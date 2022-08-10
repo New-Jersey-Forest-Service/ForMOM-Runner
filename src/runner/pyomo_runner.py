@@ -17,6 +17,8 @@ from typing import Union
 import pyomo.environ as pyo
 import pyomo.opt as opt
 
+import runner.text as text
+
 
 # In Python2, integer divisions truncate values (1/2 = 0 instead of 0.5)
 # which breaks the solver. Either way, we should be using python3
@@ -91,7 +93,7 @@ def loadPyomoModelFromDat (datFilepath: str) -> pyo.ConcreteModel:
 	return instance
 
 
-def solveConcreteModel (instance: pyo.ConcreteModel) -> Union[pyo.ConcreteModel, opt.SolverResults]:
+def solveConcreteModel (instance: pyo.ConcreteModel, verboseToConsole: bool=False) -> Union[pyo.ConcreteModel, opt.SolverResults]:
 	'''
 		Solves the passed in modle (mutates it), and returns
 		the concrete model + the solver results
@@ -99,73 +101,9 @@ def solveConcreteModel (instance: pyo.ConcreteModel) -> Union[pyo.ConcreteModel,
 	solver = pyo.SolverFactory('glpk')
 
 	# Now optimize
-	results = solver.solve(instance, tee=True)
+	results = solver.solve(instance, tee=verboseToConsole)
 
 	return instance, results
-
-
-def getOutputStr (instance: pyo.ConcreteModel, results: opt.SolverResults) -> str:
-	rstr = ''
-
-	# Check status of model
-	status = results.solver.status
-	termination_cond = results.solver.termination_condition
-
-	# List of possible status & term conditions
-	# https://github.com/Pyomo/pyomo/blob/main/pyomo/opt/results/solver.py
-
-	rstr += f"Solve attempted\n"
-	rstr += f"Status: {status}\n"
-	rstr += f"Termination Condition: {termination_cond}\n"
-	rstr += "\n" * 5
-
-	if (termination_cond != pyo.TerminationCondition.optimal):
-		rstr += " [[ ERROR ]]: Solve ended without optimal solution\n"
-		rstr += "\taborting"
-		return rstr
-
-
-
-	# Get variable values
-	decvars = instance.x.keys()
-	decvars_values = {str(k): pyo.value(instance.x[k]) for k in decvars}
-	decvars = list(decvars_values.keys())
-
-	# Pg. 14 - 22 of this textbook on optimization are really handy http://web.mit.edu/15.053/www/AMP-Chapter-01.pdf
-
-	# Slack & Shadow Price extraction 
-	# 
-	# Courtesy of this stack overflow
-	# https://stackoverflow.com/questions/65523319/pyomo-accesing-retrieving-dual-variables-shadow-price-with-binary-variables
-
-	shadow_prices = {str(key).split("[")[1][:-1]: instance.dual[key] for key in instance.dual.keys()}
-	shadow_keys = list(shadow_prices.keys())
-
-	# Extracting Slack Amounts
-	ge_keys = instance.GEConstraint.keys()
-	ge_slack = {str(key): instance.GEConstraint[key].lslack() for key in ge_keys}
-	ge_keys = list(ge_slack.keys())
-
-	le_keys = instance.LEConstraint.keys()
-	le_slack = {str(key): instance.LEConstraint[key].uslack() for key in le_keys}
-	le_keys = list(le_slack.keys())
-
-	# Now actual output
-	rstr += "\n\n == Variables\n"
-	rstr += "\n".join(["%-20s | %s" % (k, decvars_values[k]) for k in decvars])
-
-	rstr += "\n\n == Shadow Prices\n"
-	rstr += "\n".join(["%-40s | %s" % (k, shadow_prices[k]) for k in shadow_keys])
-
-	rstr += "\n\n == Slacks for GE\n"
-	rstr += "\n".join(["%-40s | %s" % (k, ge_slack[k]) for k in ge_keys])
-
-	rstr += "\n\n == Slacks for LE\n"
-	rstr += "\n".join(["%-40s | %s" % (k, le_slack[k]) for k in le_keys])
-
-	return rstr
-
-
 
 
 
@@ -178,7 +116,7 @@ if __name__ == '__main__':
 	filepath = '/home/velcro/Documents/Professional/NJDEP/TechWork/ForMOM-Runner/sample-data/SLmonthly1_out.dat'
 	instance = loadPyomoModelFromDat(filepath)
 	instance, res = solveConcreteModel(instance)
-	resStr = getOutputStr(instance, res)
+	resStr = text.exportRunText(instance, res)
 
 	print(resStr)
 
