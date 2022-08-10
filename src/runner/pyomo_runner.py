@@ -111,6 +111,9 @@ def getOutputStr (instance: pyo.ConcreteModel, results: opt.SolverResults) -> st
 	status = results.solver.status
 	termination_cond = results.solver.termination_condition
 
+	# List of possible status & term conditions
+	# https://github.com/Pyomo/pyomo/blob/main/pyomo/opt/results/solver.py
+
 	rstr += f"Solve attempted\n"
 	rstr += f"Status: {status}\n"
 	rstr += f"Termination Condition: {termination_cond}\n"

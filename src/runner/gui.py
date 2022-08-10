@@ -8,7 +8,7 @@ import pathlib
 import os
 import tempfile
 import zipfile
-from typing import List, Set
+from typing import List, Set, Union
 
 import runner.csv_to_dat as converter
 import runner.model_data_classes as model
@@ -31,12 +31,11 @@ class GUIState:
 	objFileDirStr: str = ""
 	constFileStr: str = ""
 
-	# TODO: This is kinda bad but tolerable for memory. Quantified numbers live in 
-	# 		memory.txt. In the future, this should be changed so we only ever store 
-	# 		a single model in memory.
-
 	# We store arrays of everything. In the case of a single
 	# objective file, we just use the first index
+	# TODO: This is bad but tolerable for memory. Analysis lives
+	# 		in memory.txt. In the future, we should iterate through
+	# 		models so only ever a single one is stored in memory.
 	objFilenames: List[str] = None
 	loadedModels: List[model.FinalModel] = None
 	runInstances: List[pyo.ConcreteModel] = None
@@ -409,19 +408,6 @@ class GuibuildingApp:
 	def onbtn_run_run(self):
 		print("Now do the run")
 
-		#
-		# Tempfile based running:
-		# datloc = tempfile.NamedTemporaryFile(suffix='.dat', delete=False)
-		# temppath: str = pathlib.Path(datloc.name).__str__()
-		# datloc.close()
-		# converter.writeOutputDat(
-		# 	self.state.loadedModels, 
-		# 	temppath,
-		# 	self.state.objFileSingleStr,
-		# 	self.state.constFileStr
-		# 	)
-		# instance = pyomo_runner.loadPyomoModelFromDat(temppath)
-
 		self.state.runInstances = []
 		self.state.runResults = []
 
@@ -445,35 +431,129 @@ class GuibuildingApp:
 
 		# Otherwise, create a summary
 		else:
-			# TODO:
-			statusStr = "Poopa loop"
+			# First sort successful runs (status 'ok') from non successful runs
+			successful_runs = []
+			successful_terminations = []
+
+			failed_runs = []
+			failed_terminations = []
+
+			for ind, res in enumerate(self.state.runResults):
+				status = res.solver.status
+				termination = res.solver.termination_condition
+				runfilename = self.state.objFilenames[ind]
+
+				# List of possible status & term conditions
+				# https://github.com/Pyomo/pyomo/blob/main/pyomo/opt/results/solver.py
+				if status == 'ok':
+					successful_runs.append(runfilename)
+					successful_terminations.append(termination)
+				else:
+					failed_runs.append(runfilename)
+					failed_terminations.append(termination)
+
+			# Now build the status string
+			statusStr = ""
+
+			statusStr += " === OK Runs === \n"
+			for name, term in zip(successful_runs, successful_terminations):
+				statusStr += f"{name}: {term}\n"
+			statusStr += "\n" * 3
+
+			statusStr += " === Failed Runs === \n"
+			for name, term in zip(failed_runs, failed_terminations):
+				statusStr += f"{name}: {term}\n"
+
 			self._write_new_status(statusStr)
 		
 		self._redraw_dynamics()
 
 
+
 	def onbtn_output_save(self):
 		'''
-		Select a text file to output everything to.
+		Select a text file or directory to output to.
+		'''
+		msg = ''
+
+		if self.state.multipleObjFiles:
+			msg = self._do_multirun_output()
+		else:
+			msg = self._do_singlerun_output()
+
+		self._write_new_status(msg)
+		self._redraw_dynamics()
+
+
+	def _do_singlerun_output(self) -> str:
+		'''
+		Asks the user for the valid info to output a single run,
+		returns a status string.
 		'''
 		outputTxtFileStr = filedialog.asksaveasfilename(
 			filetypes=TXT_FILES,
 			defaultextension=TXT_FILES
 		)
-		msg = ''
 
 		if isInvalidFile(outputTxtFileStr):
-			msg = "[[ XX Error ]]\nInvalid output file"
-		else:
-			runOut = pyomo_runner.getOutputStr(self.state.runInstances, self.state.runResults)
-			with open(outputTxtFileStr, 'w') as f:
-				f.write(runOut)
-			
-			msg = f"[[ Success]]\n\nWrote to file {outputTxtFileStr}"
-			self._write_new_status("Unable to output")
+			return "[[ XX Error ]]\nInvalid output file"
 
-		self._write_new_status(msg)
-		self._redraw_dynamics()
+		instance = self.state.runInstances[0]
+		result = self.state.runResults[0]
+		GuibuildingApp._output_single_run(outputTxtFileStr, instance, result)
+		
+		return f"[[ Success]]\n\nWrote to file {outputTxtFileStr}"
+
+
+	def _do_multirun_output(self) -> str:
+		'''
+		Asks the user for a directory to output a whole batch of runs.
+		'''
+		outputDirectoryStr = filedialog.askdirectory()
+
+		if isInvalidDir(outputDirectoryStr):
+			return "[[ XX Error ]]\nInvalid output directory"
+		outDir = pathlib.Path(outputDirectoryStr)
+		
+		# Within the directory, create a sub directory with the current time
+		time_str = GuibuildingApp._get_timestamp()
+		dirname = f'RunOutput-{time_str}'
+		outDir = outDir.joinpath(dirname)
+
+		try:
+			os.mkdir(outDir)
+		except Exception as excep:
+			return f"[[ XX Error ]]\n{excep}"
+
+		# For each run, output to directory
+		PREFIX = 'rawPyoOut_'
+		for ind, name in enumerate(self.state.objFilenames):
+			name = name.split(".")[0]
+			filename = PREFIX + name + '.txt'
+			filepath = outDir.joinpath(filename)
+
+			instance = self.state.runInstances[ind]
+			result = self.state.runResults[ind]
+			GuibuildingApp._output_single_run(filepath, instance, result)
+
+		num_runs = len(self.state.runResults)
+		return f"[[ Success ]]\n\nCreated directory {outDir} and wrote output for {num_runs} runs"
+
+
+	@staticmethod
+	def _output_single_run(outputFile: Union[str, pathlib.Path], 
+							runInstance: pyo.ConcreteModel, 
+							runResult: opt.SolverResults) -> None:
+		'''
+		Write a single run (successful or not) into to the directory
+		'''
+		runOut = pyomo_runner.getOutputStr(runInstance, runResult)
+		with open(outputFile, 'w') as f:
+			f.write(runOut)
+
+
+
+	
 
 	
 	def _write_new_status(self, msg_str: str):
@@ -484,6 +564,15 @@ class GuibuildingApp:
 		self.txt_status.delete("1.0", tk.END)
 
 		# Insert Time Stamp
+		time_str = GuibuildingApp._get_timestamp()
+		self.txt_status.insert(tk.END, time_str + "\n\n")
+
+		# Insert message
+		self.txt_status.insert(tk.END, msg_str)
+
+
+	@staticmethod
+	def _get_timestamp():
 		cur_time = time.localtime(time.time())
 		time_str = "{Year}-{Month}-{Day}-{Hour}-{Min}-{Sec}".format(
 			Year=cur_time.tm_year, 
@@ -493,10 +582,8 @@ class GuibuildingApp:
 			Min=str(cur_time.tm_min).zfill(2),
 			Sec=str(cur_time.tm_sec).zfill(2)
 		)
-		self.txt_status.insert(tk.END, time_str + "\n\n")
 
-		# Insert message
-		self.txt_status.insert(tk.END, msg_str)
+		return time_str
 
 
 	def _init_styling(self):
@@ -539,6 +626,17 @@ class GuibuildingApp:
 		# label
 		self.lbl_run_modelstats.configure(text="No Model Loaded")
 
+		# change the text on buttons
+		if self.state.multipleObjFiles:
+			self.btn_objcsv.config(text=text.BTNOBJ_DIR)
+			self.btn_output.config(text=text.BTNSAVE_DIR)
+			self.btn_run.config(text=text.BTNRUN_MANY)
+		else:
+			self.btn_objcsv.config(text=text.BTNOBJ_SINGLE)
+			self.btn_output.config(text=text.BTNSAVE_SINGLE)
+			self.btn_run.config(text=text.BTNRUN_SINGLE)
+
+
 
 		# Stage 1: Files Selected for import
 		if self.state.constFileStr == '':
@@ -555,11 +653,6 @@ class GuibuildingApp:
 		else:
 			self.lbl_objpath.config(text=shrinkPathString(objLocStr))
 
-		if self.state.multipleObjFiles:
-			self.btn_objcsv.config(text=text.BTNOBJ_DIR)
-		else:
-			self.btn_objcsv.config(text=text.BTNOBJ_SINGLE_FILE)
-
 		if self.state.constFileStr != '' and objLocStr != '':
 			self.btn_loadmodel['state'] = 'normal'
 			self.btn_loadmodel['style'] = 'Accent.TButton'
@@ -568,7 +661,7 @@ class GuibuildingApp:
 			return
 
 
-		# Stage 2: Model loaded
+		# Stage 2: Models loaded
 		allLM = self.state.loadedModels
 
 		if allLM != None:
@@ -594,20 +687,15 @@ class GuibuildingApp:
 			return
 		
 
-		# Stage 3: Model was run
+		# Stage 3: Models were run
 		res = self.state.runResults
 
 		if res == None:
 			return
 
-		term_cond = res.solver.termination_condition
-
-		if term_cond == pyo.TerminationCondition.optimal:
-			self.btn_output['state'] = 'normal'
-			self.btn_output['style'] = 'Accent.TButton'
-
-		else:
-			return
+		# Even if it's a failed output, we can save it
+		self.btn_output['state'] = 'normal'
+		self.btn_output['style'] = 'Accent.TButton'
 
 
 

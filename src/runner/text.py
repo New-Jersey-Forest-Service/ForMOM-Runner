@@ -3,6 +3,9 @@ Text
 
 This file contains constants and functions for the splash text,
 which is the text shown at start time. Similar to a splash screen.
+
+It would be more natural to put this in a toml or json, but I don't
+know how it'll work reading that info from inside a .pyz
 '''
 
 # The string displayed when the program boots
@@ -11,9 +14,11 @@ SPLASH_STRING = '     \n\n\n            888\'Y88    \n            888 ,\'Y  e88 
 
 NO_FILE_SEL = 'No File Selected'
 
-OBJ_MULTIPLE = 'Objectives Folder'
-OBJ_SINGLE = 'Objective .csv'
-
-BTNOBJ_SINGLE_FILE = 'Objective .csv'
+BTNOBJ_SINGLE = 'Objective .csv'
 BTNOBJ_DIR = 'Objectives Folder'
 
+BTNSAVE_SINGLE = 'Save Output to File'
+BTNSAVE_DIR = 'Save Output to Folder'
+
+BTNRUN_SINGLE = 'Run Model'
+BTNRUN_MANY = 'Run All Models'
