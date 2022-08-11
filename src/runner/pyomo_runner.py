@@ -13,7 +13,7 @@ Allows sets' indicies to be named
 New Jersey Forest Service 2022
 '''
 import sys
-from typing import Union
+from typing import Dict, Union
 import pyomo.environ as pyo
 import pyomo.opt as opt
 
@@ -107,6 +107,79 @@ def solveConcreteModel (instance: pyo.ConcreteModel, verboseToConsole: bool=Fals
 
 
 
+
+
+
+# For all of this extraction info (what are shadow prices, slacks, etc)
+# Pg. 14 - 22 of this textbook on optimization are really handy http://web.mit.edu/15.053/www/AMP-Chapter-01.pdf
+#
+# For getting shadow prices, see
+# https://stackoverflow.com/questions/65523319/pyomo-accesing-retrieving-dual-variables-shadow-price-with-binary-variables
+
+
+def getVariableValues (instance: pyo.ConcreteModel, hideDummy=True) -> Dict[str, float]:
+	'''
+		Returns a dict of variable names as keys and values as entries
+		{'167N_PLSQ_2021': 34343, ... }
+
+		hideDummy = True means it will hide variables with dummy in the name
+	'''
+	decisionVars = instance.x.keys()
+	if hideDummy:
+		decisionVars = filter(lambda s: 'dummy' not in s, decisionVars)
+	
+	return {
+		str(key): pyo.value(instance.x[key]) 
+		for key in decisionVars
+		}
+
+
+def getShadowPrices (instance: pyo.ConcreteModel, hideDummy=True) -> Dict[str, float]:
+	'''
+		Returns a dict of {constraint_name: shadow price}
+
+		hideDummy = True means it will hide variables with dummy in the name
+	'''
+	constNames = instance.dual.keys()
+	if hideDummy:
+		constNames = filter(lambda s: 'dummy' not in str(s), constNames)
+
+	return {
+		str(key).split("[")[1][:-1]: instance.dual[key] 
+		for key in constNames
+		}
+
+
+def getSlackGE (instance: pyo.ConcreteModel, hideDummy=True) -> Dict[str, float]:
+	'''
+		Returns a dict of {GEConstraintName: slack amount}
+
+		hideDummy = True means it will hide variables with dummy in the name
+	'''
+	geConstNames = instance.GEConstraint.keys()
+	if hideDummy:
+		geConstNames = filter(lambda s: 'dummy' not in s, geConstNames)
+	
+	return {
+		str(key): instance.GEConstraint[key].lslack() 
+		for key in geConstNames
+		}
+
+
+def getSlackLE (instance: pyo.ConcreteModel, hideDummy=True) -> Dict[str, float]:
+	'''
+		Returns a dict of {LEConstraintName: slack amount}
+
+		hideDummy = True means it will hide variables with dummy in the name
+	'''
+	leConstNames = instance.LEConstraint.keys()
+	if hideDummy:
+		leConstNames = filter(lambda s: 'dummy' not in s, leConstNames)
+	
+	return {
+		str(key): instance.LEConstraint[key].lslack() 
+		for key in leConstNames
+		}
 
 
 
