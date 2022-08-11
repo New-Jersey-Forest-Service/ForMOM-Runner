@@ -86,14 +86,18 @@ def statusLoadMany (errFiles: List[str],
 					f"Total Errored: {nErr}\n"
 
 	# Report file names
+	_sortedPerfect = sorted(perfectFiles) # Sorted returns a copy
+	_sortedWarn = sorted(warnFiles)       # so no side effects of input
+	_sortedErr = sorted(errFiles)
+
 	rStr += "\n\n === Files Loaded Perfectly ==="
-	rStr += "\n ~ ".join([''] + perfectFiles)
+	rStr += "\n ~ ".join([''] + _sortedPerfect)
 
 	rStr += "\n\n === Files Loaded with Warnings ==="
-	rStr += "\n ! ".join([''] + warnFiles)
+	rStr += "\n ! ".join([''] + _sortedWarn)
 
 	rStr += "\n\n === Files with Errors ==="
-	rStr += "\n x ".join([''] + errFiles)
+	rStr += "\n x ".join([''] + _sortedErr)
 	rStr += "\n\n\n\n"
 
 	# Report erros and warnings
