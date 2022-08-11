@@ -177,7 +177,7 @@ def getSlackLE (instance: pyo.ConcreteModel, hideDummy=True) -> Dict[str, float]
 		leConstNames = filter(lambda s: 'dummy' not in s, leConstNames)
 	
 	return {
-		str(key): instance.LEConstraint[key].lslack() 
+		str(key): instance.LEConstraint[key].uslack() 
 		for key in leConstNames
 		}
 
