@@ -35,7 +35,7 @@ BTNRUN_SINGLE = 'Run Model'
 BTNRUN_MANY = 'Run All Models'
 
 
-FILE_OUTTXT_PREFIX = 'rawPyoOut_'
+FILE_OUTTXT_PREFIX = 'MODELOUT_'
 
 
 
