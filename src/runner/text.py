@@ -229,14 +229,15 @@ def exportRunText (instance: pyo.ConcreteModel, results: opt.SolverResults) -> s
 	ge_slack = pyomo_runner.getSlackGE(instance)
 	le_slack = pyomo_runner.getSlackLE(instance)
 
-	shadow_keys = list(shadow_prices.keys())
-	ge_keys = list(ge_slack.keys())
-	le_keys = list(le_slack.keys())
+	decvar_keys = sorted(list(decvars_values.keys()))
+	shadow_keys = sorted(list(shadow_prices.keys()))
+	ge_keys = sorted(list(ge_slack.keys()))
+	le_keys = sorted(list(le_slack.keys()))
 
 
 	# Now actual output
 	rstr += "\n\n == Variables\n"
-	rstr += "\n".join(["%-20s | %s" % (k, decvars_values[k]) for k in decvars_values])
+	rstr += "\n".join(["%-20s | %s" % (k, decvars_values[k]) for k in decvar_keys])
 
 	rstr += "\n\n == Shadow Prices\n"
 	rstr += "\n".join(["%-40s | %s" % (k, shadow_prices[k]) for k in shadow_keys])
