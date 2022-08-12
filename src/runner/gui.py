@@ -1,3 +1,4 @@
+from pprint import pprint
 import time
 import tkinter as tk
 from tkinter import filedialog
@@ -31,6 +32,11 @@ class GUIState:
 	objFileSingleStr: str = ""
 	objFileDirStr: str = ""
 	constFileStr: str = ""
+
+	# Note: Splitting vars by underscore makes no sense unless
+	#       you have csv outputs
+	csvOutput: bool = False
+	splitVarsByUnderscore: bool = False
 
 	# We store arrays of everything. In the case of a single
 	# objective file, we just use the first index
@@ -130,11 +136,26 @@ class GuibuildingApp:
 		self.lblfrm_run.columnconfigure(0, weight=1)
 		self.lblfrm_output = ttk.Labelframe(self.frm_actualrunning)
 		self.btn_output = ttk.Button(self.lblfrm_output)
-		self.btn_output.configure(text="Save Output")
+		self.btn_output.configure(text="Save Results")
 		self.btn_output.grid(
-			column=0, columnspan=1, ipadx=10, ipady=5, padx=10, pady=10, row=1
+			column=1, columnspan=1, ipadx=10, ipady=5, padx=10, pady=10, row=0
 		)
 		self.btn_output.configure(command=self.onbtn_output_save)
+		self.frame2 = ttk.Frame(self.lblfrm_output)
+		self.chk_csvoutput = ttk.Checkbutton(self.frame2)
+		self.strvar_csvoutput = tk.StringVar(value="")
+		self.chk_csvoutput.configure(text="CSV Output", variable=self.strvar_csvoutput)
+		self.chk_csvoutput.grid(column=0, row=0, sticky="w")
+		self.chk_csvoutput.configure(command=self.onchk_csvout)
+		self.checkbutton4 = ttk.Checkbutton(self.frame2)
+		self.strvar_splitbyunderscore = tk.StringVar(value="")
+		self.checkbutton4.configure(
+			text="Split By Underscore", variable=self.strvar_splitbyunderscore
+		)
+		self.checkbutton4.grid(column=0, row=1, sticky="w")
+		self.checkbutton4.configure(command=self.onchk_splitvars)
+		self.frame2.configure(height=200, padding=1, width=200)
+		self.frame2.grid(column=0, padx=5, row=0)
 		self.lblfrm_output.configure(height=200, text="Output", width=200)
 		self.lblfrm_output.grid(column=0, pady=10, row=2, sticky="nsew")
 		self.lblfrm_output.columnconfigure(0, weight=1)
@@ -148,13 +169,12 @@ class GuibuildingApp:
 		self.txt_status.configure(
 			blockcursor="false", undo="true", width=70, wrap="word"
 		)
-		_text_ = text.SPLASH_STRING
+		_text_ = "Make sure to set the splash screen text!\n\n(& yscrollcommand)"
 		self.txt_status.insert("0.0", _text_)
 		self.txt_status.grid(column=0, padx=10, pady=10, row=0, sticky="nsew")
-		self.scroll_status = ttk.Scrollbar(self.lblfrm_status, command=self.txt_status.yview)
+		self.scroll_status = ttk.Scrollbar(self.lblfrm_status)
 		self.scroll_status.configure(orient="vertical")
 		self.scroll_status.grid(column=1, row=0, sticky="ns")
-		self.txt_status['yscrollcommand'] = self.scroll_status.set
 		self.lblfrm_status.configure(height=200, text="Status")
 		self.lblfrm_status.grid(column=1, padx=20, pady=10, row=1, sticky="nsew")
 		self.lblfrm_status.rowconfigure(0, weight=1)
@@ -167,7 +187,7 @@ class GuibuildingApp:
 		# Main widget
 		self.mainwindow = self.im_a_top
 
-		self._init_styling()
+		self._init_config()
 		self._redraw_dynamics()
 
 	def run(self):
@@ -417,23 +437,35 @@ class GuibuildingApp:
 		# Handle saving multiple outputs
 		outputDir = filedialog.askdirectory()
 
-		# numWritten = export.exportManyAsTXT(
-		# 	outfolder=outputDir,
-		# 	runNames=self.state.objFilenames,
-		# 	instances=self.state.runInstances,
-		# 	results=self.state.runInstances
-		# )
-		numWritten = export.exportManyAsCSV(
-			outfolder=outputDir,
+		numWritten = export.exportRuns(
+			outDir=outputDir,
 			runNames=self.state.objFilenames,
 			instances=self.state.runInstances,
-			results=self.state.runResults
+			results=self.state.runResults,
+
+			outType='csv' if self.state.csvOutput else 'txt',
+			splitUnders=self.state.splitVarsByUnderscore
 		)
 
 		msg = text.statusSaveMany(outputDir, numWritten)
 
 		self._write_new_status(msg)
 		self._redraw_dynamics()
+
+
+	def onchk_csvout (self):
+		self.state.csvOutput = self.strvar_csvoutput.get()
+		print(f"csvout: {self.state.csvOutput}")
+
+		self._redraw_dynamics()
+
+
+	def onchk_splitvars (self):
+		self.state.splitVarsByUnderscore = self.strvar_splitbyunderscore.get()
+		print(f"split?: {self.state.splitVarsByUnderscore}")
+
+		self._redraw_dynamics()
+
 
 	
 	def _write_new_status(self, msg_str: str):
@@ -451,11 +483,25 @@ class GuibuildingApp:
 		self.txt_status.insert(tk.END, msg_str)
 
 
-	def _init_styling(self):
+	def _init_config(self):
 		'''
-		There's some style work that I don't know how to input into
-		pyguru designer so instead it's done here
+		There's some styling and configuration I don't know how to input into
+		pygubu designer. Instead, it's done by here.
 		'''
+
+		# Splash screen text
+		self.txt_status.delete("1.0", tk.END)
+		self.txt_status.insert(tk.END, text.SPLASH_STRING)
+
+		# Reset all check buttons
+		chk_button_vars = [
+			self.strvar_csvoutput,
+			self.strvar_splitbyunderscore
+		]
+
+		for s in chk_button_vars:
+			s.set('0')
+
 		# Buttons that are always green
 		btns = [
 			self.btn_constcsv,
@@ -481,7 +527,9 @@ class GuibuildingApp:
 		btns = [
 			self.btn_output, 
 			self.btn_loadmodel, 
-			self.btn_run
+			self.btn_run,
+			self.checkbutton4,
+			self.chk_csvoutput
 		]
 
 		for b in btns:
@@ -494,11 +542,9 @@ class GuibuildingApp:
 		# change the text on buttons
 		if self.state.multipleObjFiles:
 			self.btn_objcsv.config(text=text.BTNOBJ_DIR)
-			self.btn_output.config(text=text.BTNSAVE_DIR)
 			self.btn_run.config(text=text.BTNRUN_MANY)
 		else:
 			self.btn_objcsv.config(text=text.BTNOBJ_SINGLE)
-			self.btn_output.config(text=text.BTNSAVE_SINGLE)
 			self.btn_run.config(text=text.BTNRUN_SINGLE)
 
 
@@ -544,11 +590,20 @@ class GuibuildingApp:
 			return
 		
 
-		# Stage 3: Models were run
+		# Stage 3: Output, Models have been run
 		res = self.state.runResults
 
 		if res == None:
 			return
+
+		self.chk_csvoutput['state'] = 'normal'
+
+
+		if self.state.csvOutput == '1':
+			self.checkbutton4['state'] = 'normal'
+		else:
+			self.checkbutton4['state'] = 'disabled'
+			self.strvar_splitbyunderscore.set(0)
 
 		# Even if it's a failed output, we can save it
 		self.btn_output['state'] = 'normal'

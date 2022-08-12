@@ -24,10 +24,45 @@ import runner.pyomo_runner as pyomo_runner
 #                                   High Level Exporting Calls
 # =====================================================================================
 
+
+def exportRuns (outDir: str,
+                runNames: List[str],
+                instances: List[pyo.ConcreteModel],
+                results: List[opt.SolverResults],
+                outType: str,
+                splitUnders: bool) -> int:
+    '''
+    Exports runs.
+     - outType: str 'csv' or 'txt'. Tells what type of file to save each run as
+     - splitUnders: if a csv, will split the variable names by underscores
+            'asv_343' -> 'asv', '343 as seperate columns
+     - outDir: the directory into which a new folder is created
+    '''
+    assert(outType == 'csv' or outType == 'txt')
+    assert(len(runNames) == len(instances) == len(results))
+
+    if outType == 'csv':
+        exportManyAsCSV(
+            outDir,
+            runNames,
+            instances,
+            results,
+            splitUnders
+        )
+    elif outType == 'txt':
+        exportManyAsTXT(
+            outDir,
+            runNames,
+            instances,
+            results
+        )
+
+    print("Export success :)")
+
+
 def exportSingleAsTXT (outfile, 
                     instance: pyo.ConcreteModel, 
-                    result: opt.SolverResults,
-                    verify_successful=False) -> int:
+                    result: opt.SolverResults) -> int:
     '''
     Converts a run into a single .txt file
 
@@ -40,10 +75,8 @@ def exportSingleAsTXT (outfile,
     assert(type(outfile) == str)
     assert(str(outfile)[:-4] != '.txt')
 
-    if verify_successful:
-        status = result.solver.status
-        if status != 'ok':
-            return 0
+    # With .txt files, we can export even if unsuccesfull
+    # so we don't check for optimal termination
 
     runOut = text.exportRunText(instance, result)
 
@@ -56,8 +89,7 @@ def exportSingleAsTXT (outfile,
 def exportManyAsTXT (outfolder,
                     runNames: List[str],
                     instances: List[pyo.ConcreteModel],
-                    results: List[opt.SolverResults],
-                    verify_successful=False) -> int:
+                    results: List[opt.SolverResults]) -> int:
     '''
     Converts parallel lists of instances and results to file files.
 
@@ -72,8 +104,7 @@ def exportManyAsTXT (outfolder,
         outfolder,
         runNames,
         instances,
-        results,
-        verify_successful
+        results
     )
 
 
@@ -81,7 +112,7 @@ def exportManyAsTXT (outfolder,
 def exportSingleAsCSVs (outfile, 
                     instance: pyo.ConcreteModel, 
                     result: opt.SolverResults,
-                    verify_successful=False) -> int:
+                    splitUnders: bool=True) -> int:
     '''
     Converts a single run to multiple .csvs
 
@@ -98,10 +129,10 @@ def exportSingleAsCSVs (outfile,
     assert(type(outfile) == str)
     assert(str(outfile)[:-4] != '.csv')
 
-    if verify_successful:
-        status = result.solver.status
-        if status != 'ok':
-            return 0
+    # For csv, we can only export optimal solutions
+    status = result.solver.status
+    if status != 'ok':
+        return 0
 
     # Start off with variables values
     decvars_values = pyomo_runner.getVariableValues(instance)
@@ -110,11 +141,15 @@ def exportSingleAsCSVs (outfile,
     le_slack = pyomo_runner.getSlackLE(instance)
 
 
-    # TODO: Handle different # underscores? eg: var1 = 'asd_432', var2 = 'fds_143_fds'
-    #         this would require taking the max # underscores over all variables
-    samplevar = list(decvars_values.keys())[0]
-    num_fields = len(samplevar.split("_"))
-    header = [f'tag_{n+1}' for n in range(num_fields)] + ['value']
+    header = []
+    if splitUnders:
+        # TODO: Handle different # underscores? eg: var1 = 'asd_432', var2 = 'fds_143_fds'
+        #         this would require taking the max # underscores over all variables
+        samplevar = list(decvars_values.keys())[0]
+        num_fields = len(samplevar.split("_"))
+        header = [f'tag_{n+1}' for n in range(num_fields)] + ['value']
+    else:
+        header = ['decision_variable', 'value']
 
 
     # Variable csv - This one we split by underscore so it's a little bit funkier
@@ -125,7 +160,10 @@ def exportSingleAsCSVs (outfile,
         writer.writerow(header)
         
         for var in decvars_values.keys():
-            writer.writerow(var.split("_") + [decvars_values[var]])
+            if splitUnders:
+                writer.writerow(var.split("_") + [decvars_values[var]])
+            else:
+                writer.writerow([var, decvars_values[var]])
     
     # Shadow price
     _writeDictToCSV(
@@ -155,23 +193,25 @@ def exportManyAsCSV (outfolder,
                     runNames: List[str],
                     instances: List[pyo.ConcreteModel],
                     results: List[opt.SolverResults],
-                    verify_successful=False) -> int:
+                    splitUnders=False) -> int:
     '''
     Converts parallel lists of instances and results to file files.
 
     Attempts to create a folder within the specified directory
 
-    If verify_successful = True, it checks for the status to be 'ok'.
-
     Returns the number of files written. -1 means error.
     '''
     return _exportMany(
-        exportSingleAsCSVs,
+        # Yea this is a code smell ...
+        # Basically, exportMany passes 3 parameters to the exportFunction,
+        # but exportCSV requires a fourth one (splitUnders), so I'm wrapping it in
+        # a lambda
+        lambda runPath, inst, res: exportSingleAsCSVs(runPath, inst, res, splitUnders),
         outfolder,
         runNames,
         instances,
         results,
-        verify_successful
+        splitUnders
     )
 
 
@@ -211,29 +251,24 @@ def _exportMany (exportFunction,
                 outfolder, 
                 runNames: List[str],
                 instances: List[pyo.ConcreteModel],
-                results: List[opt.SolverResults],
-                verify_successful) -> int:
-    print("Tying to export")
+                results: List[opt.SolverResults]) -> int:
     numExport = 0
 
     # Step 1: Create sub directory
     if _isInvalidDir(outfolder):
         return -1
-    print("Is valid directory")
 
     outDir = pathlib.Path(outfolder)
     time_str = text.getTimestamp()
     subdir = f'RunOutput-{time_str}'
     outDir = outDir.joinpath(subdir)
 
-    print(f"Trying to make {outDir}")
-
     try:
         os.mkdir(outDir)
     except Exception:
         return -1
-    print("Did make directory")
 
+    # Step 2: Write to it
     for name, inst, res in zip(runNames, instances, results):
         # runNames is a list of the objective files (not their paths)
         # they should be .csv, even if we're exporting to text
@@ -241,7 +276,7 @@ def _exportMany (exportFunction,
         runName = text.FILE_OUTTXT_PREFIX + name[:-4]
         runPath = str(outDir.joinpath(runName))
 
-        succ = exportFunction(runPath, inst, res, verify_successful=verify_successful)
+        succ = exportFunction(runPath, inst, res)
         if succ > 0:
             numExport += 1
 
