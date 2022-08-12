@@ -27,6 +27,16 @@ if (sys.version[0] != '3'):
 	sys.exit(1)
 
 
+
+
+
+
+
+# =====================================================================================
+#                           Setting up and Running a Model
+# =====================================================================================
+
+
 # Really this abstract model should be built once at init
 # instead of by calling a function, but the overhead is so low
 # it doesn't really matter.
@@ -110,11 +120,39 @@ def solveConcreteModel (instance: pyo.ConcreteModel, verboseToConsole: bool=Fals
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+# =====================================================================================
+#                            Extracting Information from a Run
+# =====================================================================================
+
+
+
 # For all of this extraction info (what are shadow prices, slacks, etc)
 # Pg. 14 - 22 of this textbook on optimization are really handy http://web.mit.edu/15.053/www/AMP-Chapter-01.pdf
 #
 # For getting shadow prices, see
 # https://stackoverflow.com/questions/65523319/pyomo-accesing-retrieving-dual-variables-shadow-price-with-binary-variables
+
+
+def isModelSolved (results: opt.SolverResults) -> bool:
+	'''
+	Returns whether the model is solved (optimal).
+
+	If the model did not terminate optimally, it's not guaranteed
+	you can read information from it (slacks, var values, etc)
+	'''
+	return results.solver.termination_condition == 'optimal'
 
 
 def getVariableValues (instance: pyo.ConcreteModel, hideDummy=True) -> Dict[str, float]:

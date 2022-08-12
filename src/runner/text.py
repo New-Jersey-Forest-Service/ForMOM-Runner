@@ -137,10 +137,9 @@ def statusRunMany (names: List[str], results: List[opt.SolverResults]) -> str:
 	fail_terms = []
 
 	for name, res in zip(names, results):
-		status = res.solver.status
 		termination = res.solver.termination_condition
 
-		if status == 'ok':
+		if pyomo_runner.isModelSolved(res):
 			succ_names.append(name)
 			succ_terms.append(termination)
 		else:
@@ -148,7 +147,7 @@ def statusRunMany (names: List[str], results: List[opt.SolverResults]) -> str:
 			fail_terms.append(termination)
 	
 	# Now build the string
-	rStr = ''
+	rStr = 'Note: Failed runs do not get exported\n\n'
 
 	rStr += " === Successful Runs ===\n"
 	for name, term in zip(succ_names, succ_terms):
