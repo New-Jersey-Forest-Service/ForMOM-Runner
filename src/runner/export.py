@@ -210,8 +210,7 @@ def exportManyAsCSV (outfolder,
         outfolder,
         runNames,
         instances,
-        results,
-        splitUnders
+        results
     )
 
 

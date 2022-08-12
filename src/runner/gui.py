@@ -437,12 +437,13 @@ class GuibuildingApp:
 		# Handle saving multiple outputs
 		outputDir = filedialog.askdirectory()
 
+		print(self.state.csvOutput)
+
 		numWritten = export.exportRuns(
 			outDir=outputDir,
 			runNames=self.state.objFilenames,
 			instances=self.state.runInstances,
 			results=self.state.runResults,
-
 			outType='csv' if self.state.csvOutput else 'txt',
 			splitUnders=self.state.splitVarsByUnderscore
 		)
@@ -454,7 +455,7 @@ class GuibuildingApp:
 
 
 	def onchk_csvout (self):
-		self.state.csvOutput = self.strvar_csvoutput.get()
+		self.state.csvOutput = self.strvar_csvoutput.get() == '1'
 		print(f"csvout: {self.state.csvOutput}")
 
 		self._redraw_dynamics()
@@ -599,7 +600,7 @@ class GuibuildingApp:
 		self.chk_csvoutput['state'] = 'normal'
 
 
-		if self.state.csvOutput == '1':
+		if self.state.csvOutput:
 			self.checkbutton4['state'] = 'normal'
 		else:
 			self.checkbutton4['state'] = 'disabled'
