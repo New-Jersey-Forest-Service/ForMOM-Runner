@@ -358,11 +358,15 @@ class GuibuildingApp:
 
 		if objData == None: # Error
 			self.state.loadedModels = None
-		else: # Success
+		else: 
+			# Success
 			self.state.loadedModels = [converter.convertInputToFinalModel(
 				objData=objData, 
 				constData=constrData
 			)]
+
+			objFileName = pathlib.Path(self.state.objFileSingleStr).parts[-1]
+			self.state.objFilenames = [objFileName]
 		
 		return text.statusLoadSingle(objData, messages)
 
@@ -410,47 +414,23 @@ class GuibuildingApp:
 		'''
 		msg = ''
 
-		if self.state.multipleObjFiles:
-			# Handle saving multiple outputs
-			outputDir = filedialog.askdirectory()
+		# Handle saving multiple outputs
+		outputDir = filedialog.askdirectory()
 
-			# numWritten = export.exportManyAsTXT(
-			# 	outfolder=outputDir,
-			# 	runNames=self.state.objFilenames,
-			# 	instances=self.state.runInstances,
-			# 	results=self.state.runInstances
-			# )
-			numWritten = export.exportManyAsCSV(
-				outfolder=outputDir,
-				runNames=self.state.objFilenames,
-				instances=self.state.runInstances,
-				results=self.state.runResults
-			)
+		# numWritten = export.exportManyAsTXT(
+		# 	outfolder=outputDir,
+		# 	runNames=self.state.objFilenames,
+		# 	instances=self.state.runInstances,
+		# 	results=self.state.runInstances
+		# )
+		numWritten = export.exportManyAsCSV(
+			outfolder=outputDir,
+			runNames=self.state.objFilenames,
+			instances=self.state.runInstances,
+			results=self.state.runResults
+		)
 
-			msg = text.statusSaveMany(outputDir, numWritten)
-
-		else:
-			# Handle exporting a single output
-			outputCSVFileStr = filedialog.asksaveasfilename(
-				filetypes=CSV_FILES,
-				defaultextension=CSV_FILES
-			)
-			outputCSVFileStr = outputCSVFileStr[:-4] # strip the .csv
-
-			if isInvalidFile(outputCSVFileStr):
-				msg = "[[ XX Error ]]\nInvalid output file"
-			else:
-				# numWritten = export.exportSingleAsTXT(
-				# 	outputTxtFileStr,
-				# 	instance=self.state.runInstances[0],
-				# 	result=self.state.runResults[0]
-				# )
-				numWritten = export.exportSingleAsCSVs(
-					outputCSVFileStr,
-					instance=self.state.runInstances[0],
-					result=self.state.runResults[0]
-				)
-				msg = text.statusSaveSingle(outputCSVFileStr)
+		msg = text.statusSaveMany(outputDir, numWritten)
 
 		self._write_new_status(msg)
 		self._redraw_dynamics()

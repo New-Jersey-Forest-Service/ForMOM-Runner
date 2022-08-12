@@ -179,10 +179,6 @@ def statusSaveMany (outdir: str, numWritten: int) -> str:
 		return f"[[ Success ]]\nWrote {numWritten} files to {outdir}"
 
 
-def statusSaveSingle (outdir: str) -> str:
-	return f"[[ Success ]]\n\nWrote to file {outdir}"
-
-
 
 
 
