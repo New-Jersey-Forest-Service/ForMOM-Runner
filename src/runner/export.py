@@ -109,11 +109,20 @@ def exportSingleAsCSVs (outfile,
     ge_slack = pyomo_runner.getSlackGE(instance)
     le_slack = pyomo_runner.getSlackLE(instance)
 
+
+    # TODO: Handle different # underscores? eg: var1 = 'asd_432', var2 = 'fds_143_fds'
+    #         this would require taking the max # underscores over all variables
+    samplevar = list(decvars_values.keys())[0]
+    num_fields = len(samplevar.split("_"))
+    header = [f'tag_{n+1}' for n in range(num_fields)] + ['value']
+
+
     # Variable csv - This one we split by underscore so it's a little bit funkier
     filename = outfile + '_decision_vars.csv'
     with open(filename, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
-        writer.writerow(['StandID', 'Year', 'MgmntID', 'Value'])
+
+        writer.writerow(header)
         
         for var in decvars_values.keys():
             writer.writerow(var.split("_") + [decvars_values[var]])
@@ -121,7 +130,7 @@ def exportSingleAsCSVs (outfile,
     # Shadow price
     _writeDictToCSV(
         outfile + "_shadow_price.csv",
-        ['constraint', 'shadow_price'],
+        ['constraint', 'objective_value'],
         shadow_prices
     )
 
@@ -168,6 +177,17 @@ def exportManyAsCSV (outfolder,
 
 
 
+
+
+
+
+
+
+
+# =====================================================================================
+#                               Intermediate Processing Functions
+# =====================================================================================
+
 def _writeDictToCSV (filepath, header: List[str], dict: Dict[str, float]):
     '''
         Takes a 
@@ -186,9 +206,6 @@ def _writeDictToCSV (filepath, header: List[str], dict: Dict[str, float]):
         for key in dict.keys():
             writer.writerow([key, dict[key]])
     
-
-
-
 
 def _exportMany (exportFunction,
                 outfolder, 
@@ -218,6 +235,8 @@ def _exportMany (exportFunction,
     print("Did make directory")
 
     for name, inst, res in zip(runNames, instances, results):
+        # runNames is a list of the objective files (not their paths)
+        # they should be .csv, even if we're exporting to text
         assert(name[-4:] == '.csv')
         runName = text.FILE_OUTTXT_PREFIX + name[:-4]
         runPath = str(outDir.joinpath(runName))
@@ -227,18 +246,6 @@ def _exportMany (exportFunction,
             numExport += 1
 
     return numExport
-
-
-
-
-
-
-
-
-
-# =====================================================================================
-#                               Intermediate Processing Functions
-# =====================================================================================
 
 
 
