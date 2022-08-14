@@ -296,3 +296,46 @@ def _isInvalidDir(dialogOutput) -> bool:
     return dialogOutput == None or type(dialogOutput) != str or dialogOutput.strip() == ""
 
 
+
+
+
+
+
+# Run the file to output sample data into a directory
+if __name__ == '__main__':
+    # Filepaths (change to your machine)
+    file_constraint = '/home/velcro/Documents/Professional/NJDEP/TechWork/ForMOM-Runner/sample-data/icecream_const.csv'
+    file_objective = '/home/velcro/Documents/Professional/NJDEP/TechWork/ForMOM-Runner/sample-data/icecream_obj.csv'
+    OUTPUT_DIR = './'
+
+    # Reading files
+    objData, constrData, err = converter.lintInputDataFromFilepaths(file_objective, file_constraint)
+    if objData == None:
+        print("Error loading sample data :/")
+        print(err)
+        sys.exit(1)
+
+    finalModel = converter.convertInputToFinalModel(objData, constrData)
+
+    # Run the model
+    datadict = converter.convertFinalModelToDataDict(finalModel)
+    inst = pyomo_runner.loadPyomoModelFromDataDict(datadict)
+    inst, res = pyomo_runner.solveConcreteModel(inst, verboseToConsole=True)
+
+    # Export
+    objFileName = pathlib.Path(file_objective).parts[-1]
+
+    exportRuns(
+        OUTPUT_DIR,
+        [objFileName],
+        [inst],
+        [res],
+        'csv',
+        True
+    )
+
+    print(pyomo_runner.getRunSummary(inst, res))
+
+    print("Finished")
+
+
