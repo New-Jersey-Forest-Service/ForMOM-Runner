@@ -9,10 +9,12 @@ import csv
 import os
 import pathlib
 from pprint import pprint
+import sys
 from typing import Dict, Union, List, Tuple, Optional
 import pyomo.environ as pyo
 import pyomo.opt as opt
 
+import runner.csv_to_dat as converter
 import runner.text as text
 import runner.pyomo_runner as pyomo_runner
 
@@ -40,6 +42,8 @@ def exportRuns (outDir: str,
     '''
     assert(outType == 'csv' or outType == 'txt')
     assert(len(runNames) == len(instances) == len(results))
+    assert(pathlib.Path(outDir).exists())
+    assert(pathlib.Path(outDir).is_dir())
 
     if outType == 'csv':
         exportManyAsCSV(
@@ -58,6 +62,45 @@ def exportRuns (outDir: str,
         )
 
     print("Export success :)")
+
+
+def exportSummaryTXT (outfile,
+                    runNames: List[str],
+                    instances: List[pyo.ConcreteModel],
+                    results: List[opt.SolverResults]):
+    '''
+    Generates a .txt file with descriptions of all runs in aggregate
+    '''
+    assert(type(outfile) == str)
+    assert(outfile[:-4] != '.txt')
+    summaryText = text.exportSummaryText(runNames, instances, results)
+
+    with open(outfile + '.txt', 'w') as f:
+        f.write(summaryText)
+
+
+def exportSummaryCSV (outfile,
+                    runNames: List[str],
+                    instances: List[pyo.ConcreteModel],
+                    results: List[opt.SolverResults]):
+    '''
+    Generates a .csv file with summary statistics for all runs
+    '''
+    assert(type(outfile) == str)
+    assert(outfile[:-4] != '.csv')
+
+    all_runs_info = []
+    for inst, res in zip(instances, results):
+        all_runs_info.append(pyomo_runner.getRunSummary(inst, res))
+    
+    fields = ['name'] + list(all_runs_info[0].keys())
+
+    with open(outfile + '.csv', 'w') as f:
+        w = csv.DictWriter(f, fields)
+
+        w.writeheader()
+        for name, info in zip(runNames, all_runs_info):
+            w.writerow({'name': name, **info})
 
 
 def exportSingleAsTXT (outfile, 
@@ -86,7 +129,7 @@ def exportSingleAsTXT (outfile,
     return 1
  
 
-def exportManyAsTXT (outfolder,
+def exportManyAsTXT (outFolder,
                     runNames: List[str],
                     instances: List[pyo.ConcreteModel],
                     results: List[opt.SolverResults]) -> int:
@@ -99,16 +142,18 @@ def exportManyAsTXT (outfolder,
 
     Returns the number of files written. -1 means error.
     '''
-    return _exportMany(
+    nWritten = _exportManyRuns(
         exportSingleAsTXT,
-        outfolder,
+        exportSummaryTXT,
+        outFolder,
         runNames,
         instances,
         results
     )
 
+    return nWritten
 
-# TODO: Make split by underscore optional
+
 def exportSingleAsCSVs (outfile, 
                     instance: pyo.ConcreteModel, 
                     result: opt.SolverResults,
@@ -189,7 +234,7 @@ def exportSingleAsCSVs (outfile,
     return 1
 
 
-def exportManyAsCSV (outfolder,
+def exportManyAsCSV (outFolder,
                     runNames: List[str],
                     instances: List[pyo.ConcreteModel],
                     results: List[opt.SolverResults],
@@ -201,13 +246,14 @@ def exportManyAsCSV (outfolder,
 
     Returns the number of files written. -1 means error.
     '''
-    return _exportMany(
+    return _exportManyRuns(
         # Yea this is a code smell ...
         # Basically, exportMany passes 3 parameters to the exportFunction,
         # but exportCSV requires a fourth one (splitUnders), so I'm wrapping it in
         # a lambda
         lambda runPath, inst, res: exportSingleAsCSVs(runPath, inst, res, splitUnders),
-        outfolder,
+        exportSummaryCSV,
+        outFolder,
         runNames,
         instances,
         results
@@ -246,18 +292,19 @@ def _writeDictToCSV (filepath, header: List[str], dict: Dict[str, float]):
             writer.writerow([key, dict[key]])
     
 
-def _exportMany (exportFunction,
-                outfolder, 
+def _exportManyRuns (funcExportRun,
+                funcExportSummary,
+                outFolder, 
                 runNames: List[str],
                 instances: List[pyo.ConcreteModel],
                 results: List[opt.SolverResults]) -> int:
     numExport = 0
 
     # Step 1: Create sub directory
-    if _isInvalidDir(outfolder):
+    if _isInvalidDir(outFolder):
         return -1
 
-    outDir = pathlib.Path(outfolder)
+    outDir = pathlib.Path(outFolder)
     time_str = text.getTimestamp()
     subdir = f'RunOutput-{time_str}'
     outDir = outDir.joinpath(subdir)
@@ -268,6 +315,9 @@ def _exportMany (exportFunction,
         return -1
 
     # Step 2: Write to it
+    summaryFile = str(outDir.joinpath('SUMMARY'))
+    funcExportSummary(summaryFile, runNames, instances, results)
+
     for name, inst, res in zip(runNames, instances, results):
         # runNames is a list of the objective files (not their paths)
         # they should be .csv, even if we're exporting to text
@@ -275,7 +325,8 @@ def _exportMany (exportFunction,
         runName = text.FILE_OUTTXT_PREFIX + name[:-4]
         runPath = str(outDir.joinpath(runName))
 
-        succ = exportFunction(runPath, inst, res)
+        succ = funcExportRun(runPath, inst, res)
+        print(f"Exported?: {succ}")
         if succ > 0:
             numExport += 1
 

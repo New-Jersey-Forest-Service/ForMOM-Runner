@@ -13,7 +13,7 @@ Allows sets' indicies to be named
 New Jersey Forest Service 2022
 '''
 import sys
-from typing import Dict, Union
+from typing import Any, Dict, Union
 import pyomo.environ as pyo
 import pyomo.opt as opt
 
@@ -108,10 +108,12 @@ def solveConcreteModel (instance: pyo.ConcreteModel, verboseToConsole: bool=Fals
 		Solves the passed in modle (mutates it), and returns
 		the concrete model + the solver results
 	'''
+	print("Solving a model", end='')
 	solver = pyo.SolverFactory('glpk')
 
 	# Now optimize
 	results = solver.solve(instance, tee=verboseToConsole)
+	print(" ... Solved")
 
 	return instance, results
 
@@ -153,6 +155,30 @@ def isModelSolved (results: opt.SolverResults) -> bool:
 	you can read information from it (slacks, var values, etc)
 	'''
 	return results.solver.termination_condition == 'optimal'
+
+
+def getRunSummary (instance: pyo.ConcreteModel, results: opt.SolverResults) -> Dict[str, Any]:
+	'''
+	Returns a dict of run attributes. If an attribute is impossible to get (eg: run not solved)
+	then the value is set to None.
+	{
+		'termination': 'optimal',
+		'objective_value': 43243,
+		    ...
+	}
+	'''
+	status = str(results.solver.status)
+	termination = str(results.solver.termination_condition)
+	obj_value = None
+
+	if termination == 'optimal':
+		obj_value = pyo.value(instance.OBJ)
+	
+	return {
+		'status': status,
+		'termination': termination,
+		'objective_value': obj_value
+	}
 
 
 def getVariableValues (instance: pyo.ConcreteModel, hideDummy=True) -> Dict[str, float]:

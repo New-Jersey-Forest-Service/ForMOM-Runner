@@ -197,6 +197,45 @@ def guiLoadedModelsSummary (loadedModels: List[models.FinalModel]) -> str:
 
 
 
+
+
+
+def exportSummaryText (names: List[str], instances: List[pyo.ConcreteModel], results: List[opt.SolverResults]) -> str:
+	# First, extract data to parallel lists
+	all_runs_info = []
+	for inst, res in zip(instances, results):
+		all_runs_info.append(pyomo_runner.getRunSummary(inst, res))
+	
+	# For each key in the summary results, get the max length
+	max_lens = {}
+	fields = list(all_runs_info[0].keys())
+	for k in fields:
+		max_lens[k] = max(len(str(run[k])) for run in all_runs_info) + 4
+	max_name_len = max(len(n) for n in names) + 4
+
+	# Now build the string
+	rStr = ''
+
+	# Header
+	BASE_STR = '{0:{1}} | '
+	rStr += BASE_STR.format('Name', max_name_len)
+	for k in fields:
+		rStr += BASE_STR.format(k, max_lens[k])
+	rStr += "\n"
+	rStr += "-" * len(rStr)
+	rStr += "\n"
+	
+	# Data
+	for name, info in zip(names, all_runs_info):
+		rStr += BASE_STR.format(name, max_name_len)
+		for k in fields:
+			rStr += BASE_STR.format(str(info[k]), max_lens[k])
+
+	return rStr
+
+
+
+
 def exportRunText (instance: pyo.ConcreteModel, results: opt.SolverResults) -> str:
 	rstr = ''
 
