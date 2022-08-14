@@ -403,7 +403,7 @@ class GuibuildingApp:
 		# Run all the models
 		for lm in self.state.loadedModels:
 			datadict = converter.convertFinalModelToDataDict(lm)
-			instance = pyomo_runner.loadPyomoModelFromFinalModel(datadict)
+			instance = pyomo_runner.loadPyomoModelFromDataDict(datadict)
 			instance, res = pyomo_runner.solveConcreteModel(instance)
 
 			self.state.runInstances.append(instance)

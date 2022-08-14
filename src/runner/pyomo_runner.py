@@ -83,7 +83,7 @@ def _buildAbstractModel () -> pyo.AbstractModel:
 	return model
 
 
-def loadPyomoModelFromFinalModel (datadict: dict):
+def loadPyomoModelFromDataDict (datadict: dict):
 	model = _buildAbstractModel()
 	instance = model.create_instance(data=datadict)
 	instance.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT_EXPORT)
