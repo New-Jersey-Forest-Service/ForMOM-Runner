@@ -21,7 +21,23 @@ import runner.pyomo_runner as pyomo_runner
 
 
 # The string displayed when the program boots
-SPLASH_STRING = '	 \n\n\n			888\'Y88	\n			888 ,\'Y  e88 88e  888,8,\n			888C8   d888 888b 888 " \n			888 "   Y888 888P 888   \n			888	  "88 88"  888   \n \n		 e   e	   e88 88e	   e   e\n		d8b d8b	 d888 888b	 d8b d8b\n	   e Y8b Y8b   C8888 8888D   e Y8b Y8b\n	  d8b Y8b Y8b   Y888 888P   d8b Y8b Y8b\n	 d888b Y8b Y8b   "88 88"   d888b Y8b Y8b\n\n  \n'
+SPLASH_STRING = '''
+         
+
+                     888'Y88                 
+                     888 ,'Y  e88 88e  888,8,
+                     888C8   d888 888b 888 " 
+                     888 "   Y888 888P 888   
+                     888      "88 88"  888   
+            
+                 e   e       e88 88e       e   e     
+                d8b d8b     d888 888b     d8b d8b    
+               e Y8b Y8b   C8888 8888D   e Y8b Y8b   
+              d8b Y8b Y8b   Y888 888P   d8b Y8b Y8b  
+             d888b Y8b Y8b   "88 88"   d888b Y8b Y8b 
+
+'''
+# Rozzo font: https://ascii.co.uk/text
 
 NO_FILE_SEL = 'No File Selected'
 

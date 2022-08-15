@@ -494,6 +494,10 @@ class GuibuildingApp:
 		self.txt_status.delete("1.0", tk.END)
 		self.txt_status.insert(tk.END, text.SPLASH_STRING)
 
+		# Scroll bar
+		self.scroll_status.configure(command=self.txt_status.yview)
+		self.txt_status['yscrollcommand'] = self.scroll_status.set
+
 		# Reset all check buttons
 		chk_button_vars = [
 			self.strvar_csvoutput,

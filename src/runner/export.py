@@ -95,7 +95,7 @@ def exportSummaryCSV (outfile,
     
     fields = ['name'] + list(all_runs_info[0].keys())
 
-    with open(outfile + '.csv', 'w') as f:
+    with open(outfile + '.csv', 'w', newline='') as f:
         w = csv.DictWriter(f, fields)
 
         w.writeheader()
