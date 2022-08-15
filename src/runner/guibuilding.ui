@@ -1,9 +1,8 @@
 <?xml version='1.0' encoding='utf-8'?>
 <interface version="1.2">
-  <object class="tk.Toplevel" id="im_a_top">
+  <object class="ttk.Frame" id="im_a_top">
+    <property name="padding">10</property>
     <property name="height">200</property>
-    <property name="padx">10</property>
-    <property name="pady">10</property>
     <property name="width">200</property>
     <containerlayout manager="grid">
       <property type="col" id="1" name="weight">1</property>

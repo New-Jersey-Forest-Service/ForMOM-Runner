@@ -1,9 +1,15 @@
 '''
-.csv to .dat converter
+Converter.py
 
-This script will convert two csvs, one for the
-objective function and one for the constraints,
-and then spit out a single .dat file.
+The functions in the file help read and convert input .csv files
+into FinalModel objects, and then into dictionaries to be sent to
+Pyomo.
+
+This was originally csv_to_dat.py, and so there is code for exporting
+to .dat files which is no longer used.
+
+There are also some functions for command line input, which
+may be helpful testing.
 
 Michael Gorbunov
 William Zipse

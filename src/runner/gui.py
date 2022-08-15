@@ -1,3 +1,9 @@
+'''
+GUI.py
+
+This file launches the gui. Gui is built with pygubu-designer.
+'''
+
 from pprint import pprint
 import time
 import tkinter as tk
@@ -11,7 +17,7 @@ import tempfile
 import zipfile
 from typing import List, Set, Union
 
-import runner.csv_to_dat as converter
+import runner.converter as converter
 import runner.model_data_classes as model
 import runner.pyomo_runner as pyomo_runner
 import runner.text as text
@@ -21,6 +27,7 @@ import pyomo.environ as pyo
 import pyomo.opt as opt
 
 PATH_DISPLAY_LEN = 35
+# TODO: You can have it filter only *obj.csv and *const.csv
 CSV_FILES = [('CSV Files','*.csv'), ('All Files','*.*')]
 TXT_FILES = [('Text Files','*.txt'), ('All Files','*.*')]
 
@@ -34,7 +41,7 @@ class GUIState:
 	constFileStr: str = ""
 
 	# Note: Splitting vars by underscore makes no sense unless
-	#       you have csv outputs
+	#	   you have csv outputs
 	csvOutput: bool = False
 	splitVarsByUnderscore: bool = False
 
@@ -59,7 +66,7 @@ class GuibuildingApp:
 		self.state = GUIState()
 
 		# build ui
-		self.im_a_top = master if master else tk.Tk()
+		self.im_a_top = ttk.Frame(master)
 		self.frm_title = ttk.Frame(self.im_a_top)
 		self.lbl_title = ttk.Label(self.frm_title)
 		self.lbl_title.configure(text="ForMOM Linear Model Runner")
@@ -136,7 +143,7 @@ class GuibuildingApp:
 		self.lblfrm_run.columnconfigure(0, weight=1)
 		self.lblfrm_output = ttk.Labelframe(self.frm_actualrunning)
 		self.btn_output = ttk.Button(self.lblfrm_output)
-		self.btn_output.configure(text="Save Results")
+		self.btn_output.configure(text="Save Output")
 		self.btn_output.grid(
 			column=1, columnspan=1, ipadx=10, ipady=5, padx=10, pady=10, row=0
 		)
@@ -179,7 +186,8 @@ class GuibuildingApp:
 		self.lblfrm_status.grid(column=1, padx=20, pady=10, row=1, sticky="nsew")
 		self.lblfrm_status.rowconfigure(0, weight=1)
 		self.lblfrm_status.columnconfigure(0, weight=1)
-		self.im_a_top.configure(height=200, padx=10, pady=10, width=200)
+		self.im_a_top.configure(height=200, padding=10, width=200)
+		self.im_a_top.grid()
 		self.im_a_top.rowconfigure(1, weight=1)
 		self.im_a_top.columnconfigure(1, weight=1)
 		self.im_a_top.columnconfigure(2, weight=1)
@@ -527,6 +535,14 @@ class GuibuildingApp:
 
 
 	def _redraw_dynamics(self):
+		'''
+		This should be called after each update to state.
+
+		It redraws all dynamic GUI elements (eg: buttons that need disabling vs enabling)
+
+		It does affect state, clearing out variables which might not be
+		cleared to avoid bugs.
+		'''
 		# Reset all dyanmics
 		# buttons
 		btns = [
@@ -668,8 +684,8 @@ def loadtheme_insidezip (root: tk.Tk):
 	'''
 	# When loading the theme, tcl needs to access an actual file
 	# but when this program is built, it's inside a zip (.pyz).
-	# So, we unzip the theme folder within the .pyz into a temp 
-	# folder and send it to tcl,
+	# So, we unzip the theme folder from within the .pyz, into a
+	# temp folder, and send it to tcl,
 	#
 	# -\_(*_*)_/-
 	style = ttk.Style(root)

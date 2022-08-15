@@ -14,7 +14,7 @@ from typing import Dict, Union, List, Tuple, Optional
 import pyomo.environ as pyo
 import pyomo.opt as opt
 
-import runner.csv_to_dat as converter
+import runner.converter as converter
 import runner.text as text
 import runner.pyomo_runner as pyomo_runner
 
