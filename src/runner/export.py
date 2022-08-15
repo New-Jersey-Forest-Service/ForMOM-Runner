@@ -3,6 +3,10 @@ Export.py
 
 This file handles all exporting. Pass in names, results, instances and this will
 write to files.
+
+The architecture here is actually kinda bad, I use function pointers so you
+lose typing info and I even have to resort to lambdas :/. A lot of functions
+have asserts though so that should act as a guard rail.
 '''
 
 import csv
