@@ -1,3 +1,10 @@
+'''
+GUI.py
+
+This file launches the gui. Gui is built with pygubu-designer.
+'''
+
+from pprint import pprint
 import time
 import tkinter as tk
 from tkinter import filedialog
@@ -10,15 +17,17 @@ import tempfile
 import zipfile
 from typing import List, Set, Union
 
-import runner.csv_to_dat as converter
+import runner.converter as converter
 import runner.model_data_classes as model
 import runner.pyomo_runner as pyomo_runner
 import runner.text as text
+import runner.export as export
 
 import pyomo.environ as pyo
 import pyomo.opt as opt
 
 PATH_DISPLAY_LEN = 35
+# TODO: You can have it filter only *obj.csv and *const.csv
 CSV_FILES = [('CSV Files','*.csv'), ('All Files','*.*')]
 TXT_FILES = [('Text Files','*.txt'), ('All Files','*.*')]
 
@@ -30,6 +39,11 @@ class GUIState:
 	objFileSingleStr: str = ""
 	objFileDirStr: str = ""
 	constFileStr: str = ""
+
+	# Note: Splitting vars by underscore makes no sense unless
+	#	   you have csv outputs
+	csvOutput: bool = False
+	splitVarsByUnderscore: bool = False
 
 	# We store arrays of everything. In the case of a single
 	# objective file, we just use the first index
@@ -51,7 +65,8 @@ class GuibuildingApp:
 		# state variable
 		self.state = GUIState()
 
-		self.im_a_top = master if master else tk.Tk()
+		# build ui
+		self.im_a_top = ttk.Frame(master)
 		self.frm_title = ttk.Frame(self.im_a_top)
 		self.lbl_title = ttk.Label(self.frm_title)
 		self.lbl_title.configure(text="ForMOM Linear Model Runner")
@@ -74,7 +89,7 @@ class GuibuildingApp:
 		self.btn_constcsv.grid(column=0, ipadx=2, ipady=2, padx=5, row=2, sticky="ew")
 		self.btn_constcsv.configure(command=self.onbtn_import_const)
 		self.btn_loadmodel = ttk.Button(self.lblfrm_import)
-		self.btn_loadmodel.configure(text="Load Model")
+		self.btn_loadmodel.configure(text="Load")
 		self.btn_loadmodel.grid(
 			column=0, columnspan=2, ipadx=10, ipady=5, padx=10, pady=10, row=3
 		)
@@ -130,9 +145,24 @@ class GuibuildingApp:
 		self.btn_output = ttk.Button(self.lblfrm_output)
 		self.btn_output.configure(text="Save Output")
 		self.btn_output.grid(
-			column=0, columnspan=1, ipadx=10, ipady=5, padx=10, pady=10, row=1
+			column=1, columnspan=1, ipadx=10, ipady=5, padx=10, pady=10, row=0
 		)
 		self.btn_output.configure(command=self.onbtn_output_save)
+		self.frame2 = ttk.Frame(self.lblfrm_output)
+		self.chk_csvoutput = ttk.Checkbutton(self.frame2)
+		self.strvar_csvoutput = tk.StringVar(value="")
+		self.chk_csvoutput.configure(text="CSV Output", variable=self.strvar_csvoutput)
+		self.chk_csvoutput.grid(column=0, row=0, sticky="w")
+		self.chk_csvoutput.configure(command=self.onchk_csvout)
+		self.checkbutton4 = ttk.Checkbutton(self.frame2)
+		self.strvar_splitbyunderscore = tk.StringVar(value="")
+		self.checkbutton4.configure(
+			text="Split By Underscore", variable=self.strvar_splitbyunderscore
+		)
+		self.checkbutton4.grid(column=0, row=1, sticky="w")
+		self.checkbutton4.configure(command=self.onchk_splitvars)
+		self.frame2.configure(height=200, padding=1, width=200)
+		self.frame2.grid(column=0, padx=5, row=0)
 		self.lblfrm_output.configure(height=200, text="Output", width=200)
 		self.lblfrm_output.grid(column=0, pady=10, row=2, sticky="nsew")
 		self.lblfrm_output.columnconfigure(0, weight=1)
@@ -143,15 +173,21 @@ class GuibuildingApp:
 		self.frm_actualrunning.columnconfigure(0, minsize=300, weight=1)
 		self.lblfrm_status = ttk.Labelframe(self.im_a_top)
 		self.txt_status = tk.Text(self.lblfrm_status)
-		self.txt_status.configure(undo="true", width=70, wrap="word")
-		_text_ = text.SPLASH_STRING
+		self.txt_status.configure(
+			blockcursor="false", undo="true", width=70, wrap="word"
+		)
+		_text_ = "Make sure to set the splash screen text!\n\n(& yscrollcommand)"
 		self.txt_status.insert("0.0", _text_)
 		self.txt_status.grid(column=0, padx=10, pady=10, row=0, sticky="nsew")
+		self.scroll_status = ttk.Scrollbar(self.lblfrm_status)
+		self.scroll_status.configure(orient="vertical")
+		self.scroll_status.grid(column=1, row=0, sticky="ns")
 		self.lblfrm_status.configure(height=200, text="Status")
 		self.lblfrm_status.grid(column=1, padx=20, pady=10, row=1, sticky="nsew")
 		self.lblfrm_status.rowconfigure(0, weight=1)
 		self.lblfrm_status.columnconfigure(0, weight=1)
-		self.im_a_top.configure(height=200, padx=10, pady=10, width=200)
+		self.im_a_top.configure(height=200, padding=10, width=200)
+		self.im_a_top.grid()
 		self.im_a_top.rowconfigure(1, weight=1)
 		self.im_a_top.columnconfigure(1, weight=1)
 		self.im_a_top.columnconfigure(2, weight=1)
@@ -159,7 +195,7 @@ class GuibuildingApp:
 		# Main widget
 		self.mainwindow = self.im_a_top
 
-		self._init_styling()
+		self._init_config()
 		self._redraw_dynamics()
 
 	def run(self):
@@ -265,6 +301,9 @@ class GuibuildingApp:
 		else:
 			status_str = self._load_single_obj()
 
+		# reset any existing results
+		self.state.runResults = None
+
 		self._write_new_status(status_str)
 		self._redraw_dynamics()
 
@@ -313,63 +352,27 @@ class GuibuildingApp:
 					)
 				)
 
+		# Now check for errors
+		nPerf = len(perfect_files)
+		nWarn = len(warning_files)
+		nErr = len(error_files)
+		nLoaded = len(self.state.loadedModels)
 		
-		# Now build the status string
-		status_str = ""
+		assert(nLoaded == nPerf + nWarn)
 
-		num_perfect = len(perfect_files)
-		num_warning = len(warning_files)
-		num_error = len(error_files)
-		num_loaded = len(self.state.loadedModels)
-		assert(num_loaded == num_perfect + num_warning)
-
-
-		# Two ways to have an error
-		if num_perfect + num_warning + num_error == 0:
-			status_str += "[[ Error ]]\n"
-			status_str += "No .csv files found in directory"
-			status_str += self.state.objFileDirStr
+		if nPerf + nWarn + nErr == 0:
 			self.state.loadedModels = None
-		
-		elif num_loaded == 0:
-			status_str += "[[ Error ]]\n"
-			status_str += "All objective files loaded with errors."
+		elif nLoaded == 0:
 			self.state.loadedModels = None
-		
-		else:
-			status_str += "[[ Success ]]\n"
-			status_str += "At least one objective file worked"
 
-		status_str += "\n\n"
-
-
-		# Give summary numbers
-		status_str += f"Total Loaded: {num_loaded}\n" + \
-					 f" - perfectly: {num_perfect}\n" + \
-					 f" - with warning: {num_warning}\n" + \
-					 f"Total Errored: {num_error}\n"
-
-		# Report file names
-		status_str += "\n\n === Files Loaded Perfectly ==="
-		status_str += "\n ~ ".join([''] + perfect_files)
-
-		status_str += "\n\n === Files Loaded with Warnings ==="
-		status_str += "\n ! ".join([''] + warning_files)
-
-		status_str += "\n\n === Files with Errors ==="
-		status_str += "\n x ".join([''] + error_files)
-		status_str += "\n\n\n\n"
-
-		# Report erros and warnings
-		if len(warnings_found) != 0:
-			status_str += "\n!!!! Warnings found !!!!"
-			status_str += "\n\n[[ Warning ]]\n".join([''] + list(warnings_found))
-
-		if len(errors_found) != 0:
-			status_str += "\n\n\nXXXX Errors found XXXX"
-			status_str += "\n\n[[ Error ]]\n".join([''] + list(errors_found))
-
-		return status_str
+		# Return status string
+		return text.statusLoadMany(
+			errFiles=error_files,
+			warnFiles=warning_files,
+			perfectFiles=perfect_files,
+			errFound=errors_found,
+			warnFound=warnings_found
+		)
 
 
 	def _load_single_obj(self) -> str:
@@ -381,25 +384,19 @@ class GuibuildingApp:
 			constrFilePath=self.state.constFileStr
 		)
 
-		status_str = ""
-
-		if objData == None:
-			# Error
-			status_str = "XXXXXX\n[[ Errors Occured - Unable to Convert ]]\n"
-			status_str += "\n\n[[ Error ]]\n".join([''] + messages)
+		if objData == None: # Error
 			self.state.loadedModels = None
-
-		else:
+		else: 
 			# Success
-			status_str = "[[ Conversion Success ]]\n"
-			if len(messages) >= 1:
-				status_str += "\n\n[[ Warning ]]\n".join([''] + messages)
 			self.state.loadedModels = [converter.convertInputToFinalModel(
 				objData=objData, 
 				constData=constrData
 			)]
+
+			objFileName = pathlib.Path(self.state.objFileSingleStr).parts[-1]
+			self.state.objFilenames = [objFileName]
 		
-		return status_str
+		return text.statusLoadSingle(objData, messages)
 
 
 
@@ -414,58 +411,27 @@ class GuibuildingApp:
 		# Run all the models
 		for lm in self.state.loadedModels:
 			datadict = converter.convertFinalModelToDataDict(lm)
-			instance = pyomo_runner.loadPyomoModelFromFinalModel(datadict)
+			instance = pyomo_runner.loadPyomoModelFromDataDict(datadict)
 			instance, res = pyomo_runner.solveConcreteModel(instance)
 
 			self.state.runInstances.append(instance)
 			self.state.runResults.append(res)
 
-		# With a single run, output the results to the status
-		if not self.state.multipleObjFiles:
-			resStr = pyomo_runner.getOutputStr(instance, res)
+		# Write the status string
+		statusStr = ""
 
-			self.state.runInstances = instance
-			self.state.runResults = res
-
-			self._write_new_status(resStr)
-
-		# Otherwise, create a summary
+		if self.state.multipleObjFiles:
+			statusStr = text.statusRunMany(
+				names=self.state.objFilenames,
+				results=self.state.runResults
+			)
 		else:
-			# First sort successful runs (status 'ok') from non successful runs
-			successful_runs = []
-			successful_terminations = []
+			statusStr = text.statusRunSingle(
+				instance=self.state.runInstances[0],
+				results=self.state.runResults[0]
+			)
 
-			failed_runs = []
-			failed_terminations = []
-
-			for ind, res in enumerate(self.state.runResults):
-				status = res.solver.status
-				termination = res.solver.termination_condition
-				runfilename = self.state.objFilenames[ind]
-
-				# List of possible status & term conditions
-				# https://github.com/Pyomo/pyomo/blob/main/pyomo/opt/results/solver.py
-				if status == 'ok':
-					successful_runs.append(runfilename)
-					successful_terminations.append(termination)
-				else:
-					failed_runs.append(runfilename)
-					failed_terminations.append(termination)
-
-			# Now build the status string
-			statusStr = ""
-
-			statusStr += " === OK Runs === \n"
-			for name, term in zip(successful_runs, successful_terminations):
-				statusStr += f"{name}: {term}\n"
-			statusStr += "\n" * 3
-
-			statusStr += " === Failed Runs === \n"
-			for name, term in zip(failed_runs, failed_terminations):
-				statusStr += f"{name}: {term}\n"
-
-			self._write_new_status(statusStr)
-		
+		self._write_new_status(statusStr)
 		self._redraw_dynamics()
 
 
@@ -476,84 +442,39 @@ class GuibuildingApp:
 		'''
 		msg = ''
 
-		if self.state.multipleObjFiles:
-			msg = self._do_multirun_output()
-		else:
-			msg = self._do_singlerun_output()
+		# Handle saving multiple outputs
+		outputDir = filedialog.askdirectory()
+
+		print(self.state.csvOutput)
+
+		numWritten = export.exportRuns(
+			outDir=outputDir,
+			runNames=self.state.objFilenames,
+			instances=self.state.runInstances,
+			results=self.state.runResults,
+			outType='csv' if self.state.csvOutput else 'txt',
+			splitUnders=self.state.splitVarsByUnderscore
+		)
+
+		msg = text.statusSaveMany(outputDir, numWritten)
 
 		self._write_new_status(msg)
 		self._redraw_dynamics()
 
 
-	def _do_singlerun_output(self) -> str:
-		'''
-		Asks the user for the valid info to output a single run,
-		returns a status string.
-		'''
-		outputTxtFileStr = filedialog.asksaveasfilename(
-			filetypes=TXT_FILES,
-			defaultextension=TXT_FILES
-		)
+	def onchk_csvout (self):
+		self.state.csvOutput = self.strvar_csvoutput.get() == '1'
+		print(f"csvout: {self.state.csvOutput}")
 
-		if isInvalidFile(outputTxtFileStr):
-			return "[[ XX Error ]]\nInvalid output file"
-
-		instance = self.state.runInstances[0]
-		result = self.state.runResults[0]
-		GuibuildingApp._output_single_run(outputTxtFileStr, instance, result)
-		
-		return f"[[ Success]]\n\nWrote to file {outputTxtFileStr}"
+		self._redraw_dynamics()
 
 
-	def _do_multirun_output(self) -> str:
-		'''
-		Asks the user for a directory to output a whole batch of runs.
-		'''
-		outputDirectoryStr = filedialog.askdirectory()
+	def onchk_splitvars (self):
+		self.state.splitVarsByUnderscore = self.strvar_splitbyunderscore.get()
+		print(f"split?: {self.state.splitVarsByUnderscore}")
 
-		if isInvalidDir(outputDirectoryStr):
-			return "[[ XX Error ]]\nInvalid output directory"
-		outDir = pathlib.Path(outputDirectoryStr)
-		
-		# Within the directory, create a sub directory with the current time
-		time_str = GuibuildingApp._get_timestamp()
-		dirname = f'RunOutput-{time_str}'
-		outDir = outDir.joinpath(dirname)
+		self._redraw_dynamics()
 
-		try:
-			os.mkdir(outDir)
-		except Exception as excep:
-			return f"[[ XX Error ]]\n{excep}"
-
-		# For each run, output to directory
-		PREFIX = 'rawPyoOut_'
-		for ind, name in enumerate(self.state.objFilenames):
-			name = name.split(".")[0]
-			filename = PREFIX + name + '.txt'
-			filepath = outDir.joinpath(filename)
-
-			instance = self.state.runInstances[ind]
-			result = self.state.runResults[ind]
-			GuibuildingApp._output_single_run(filepath, instance, result)
-
-		num_runs = len(self.state.runResults)
-		return f"[[ Success ]]\n\nCreated directory {outDir} and wrote output for {num_runs} runs"
-
-
-	@staticmethod
-	def _output_single_run(outputFile: Union[str, pathlib.Path], 
-							runInstance: pyo.ConcreteModel, 
-							runResult: opt.SolverResults) -> None:
-		'''
-		Write a single run (successful or not) into to the directory
-		'''
-		runOut = pyomo_runner.getOutputStr(runInstance, runResult)
-		with open(outputFile, 'w') as f:
-			f.write(runOut)
-
-
-
-	
 
 	
 	def _write_new_status(self, msg_str: str):
@@ -564,33 +485,36 @@ class GuibuildingApp:
 		self.txt_status.delete("1.0", tk.END)
 
 		# Insert Time Stamp
-		time_str = GuibuildingApp._get_timestamp()
+		time_str = text.getTimestamp()
 		self.txt_status.insert(tk.END, time_str + "\n\n")
 
 		# Insert message
 		self.txt_status.insert(tk.END, msg_str)
 
 
-	@staticmethod
-	def _get_timestamp():
-		cur_time = time.localtime(time.time())
-		time_str = "{Year}-{Month}-{Day}-{Hour}-{Min}-{Sec}".format(
-			Year=cur_time.tm_year, 
-			Month=str(cur_time.tm_mon).zfill(2),  # zfill pads the string with zeros
-			Day=str(cur_time.tm_mday).zfill(2),   # i.e. "3" -> "03"
-			Hour=str(cur_time.tm_hour).zfill(2),
-			Min=str(cur_time.tm_min).zfill(2),
-			Sec=str(cur_time.tm_sec).zfill(2)
-		)
-
-		return time_str
-
-
-	def _init_styling(self):
+	def _init_config(self):
 		'''
-		There's some style work that I don't know how to input into
-		pyguru designer so instead it's done here
+		There's some styling and configuration I don't know how to input into
+		pygubu designer. Instead, it's done by here.
 		'''
+
+		# Splash screen text
+		self.txt_status.delete("1.0", tk.END)
+		self.txt_status.insert(tk.END, text.SPLASH_STRING)
+
+		# Scroll bar
+		self.scroll_status.configure(command=self.txt_status.yview)
+		self.txt_status['yscrollcommand'] = self.scroll_status.set
+
+		# Reset all check buttons
+		chk_button_vars = [
+			self.strvar_csvoutput,
+			self.strvar_splitbyunderscore
+		]
+
+		for s in chk_button_vars:
+			s.set('0')
+
 		# Buttons that are always green
 		btns = [
 			self.btn_constcsv,
@@ -611,12 +535,22 @@ class GuibuildingApp:
 
 
 	def _redraw_dynamics(self):
+		'''
+		This should be called after each update to state.
+
+		It redraws all dynamic GUI elements (eg: buttons that need disabling vs enabling)
+
+		It does affect state, clearing out variables which might not be
+		cleared to avoid bugs.
+		'''
 		# Reset all dyanmics
 		# buttons
 		btns = [
 			self.btn_output, 
 			self.btn_loadmodel, 
-			self.btn_run
+			self.btn_run,
+			self.checkbutton4,
+			self.chk_csvoutput
 		]
 
 		for b in btns:
@@ -629,11 +563,9 @@ class GuibuildingApp:
 		# change the text on buttons
 		if self.state.multipleObjFiles:
 			self.btn_objcsv.config(text=text.BTNOBJ_DIR)
-			self.btn_output.config(text=text.BTNSAVE_DIR)
 			self.btn_run.config(text=text.BTNRUN_MANY)
 		else:
 			self.btn_objcsv.config(text=text.BTNOBJ_SINGLE)
-			self.btn_output.config(text=text.BTNSAVE_SINGLE)
 			self.btn_run.config(text=text.BTNRUN_SINGLE)
 
 
@@ -658,6 +590,9 @@ class GuibuildingApp:
 			self.btn_loadmodel['style'] = 'Accent.TButton'
 		
 		else:
+			# We reset all state for future steps
+			self.state.loadedModels = None
+			self.state.runResults = None
 			return
 
 
@@ -668,30 +603,28 @@ class GuibuildingApp:
 			self.btn_run['state'] = 'normal'
 			self.btn_run['style'] = 'Accent.TButton'
 
-			sampleLM = allLM[0]
-
-			num_vars = len(sampleLM.var_names)
-			num_consts = len(sampleLM.eq_vec) + len(sampleLM.ge_vec) + len(sampleLM.le_vec)
-			model_str = \
-				f"Model Loaded\n" + \
-				f"{num_vars} variables, {num_consts} constraints\n" + \
-				f"EQ: {len(sampleLM.eq_vec)} | GE: {len(sampleLM.ge_vec)} | LE: {len(sampleLM.le_vec)}"
-			
-			if self.state.multipleObjFiles:
-				model_str += '\n' + \
-							f'Objectives Loaded: {len(allLM)}'
-
+			model_str = text.guiLoadedModelsSummary(allLM)
 			self.lbl_run_modelstats.configure(text=model_str)
 		
 		else:
+			self.state.runResults = None
 			return
 		
 
-		# Stage 3: Models were run
+		# Stage 3: Output, Models have been run
 		res = self.state.runResults
 
 		if res == None:
 			return
+
+		self.chk_csvoutput['state'] = 'normal'
+
+
+		if self.state.csvOutput:
+			self.checkbutton4['state'] = 'normal'
+		else:
+			self.checkbutton4['state'] = 'disabled'
+			self.strvar_splitbyunderscore.set(0)
 
 		# Even if it's a failed output, we can save it
 		self.btn_output['state'] = 'normal'
@@ -751,8 +684,8 @@ def loadtheme_insidezip (root: tk.Tk):
 	'''
 	# When loading the theme, tcl needs to access an actual file
 	# but when this program is built, it's inside a zip (.pyz).
-	# So, we unzip the theme folder within the .pyz into a temp 
-	# folder and send it to tcl,
+	# So, we unzip the theme folder from within the .pyz, into a
+	# temp folder, and send it to tcl,
 	#
 	# -\_(*_*)_/-
 	style = ttk.Style(root)
